@@ -103,6 +103,8 @@ TEMPLATES = [
 WSGI_APPLICATION = "config.wsgi.application"
 
 # Base de données : DATABASE_URL (Vercel, Neon…), sinon PostgreSQL par DB_*, sinon SQLite.
+# Sur Vercel sans base reliée : démo éphémère (SQLite dans /tmp, recréée à chaque démarrage).
+DEMO_EPHEMERE = False
 if env("DATABASE_URL"):
     _url = urllib.parse.urlparse(env("DATABASE_URL"))
     DATABASES = {
@@ -131,6 +133,9 @@ elif env("DB_ENGINE") == "postgresql":
             "PORT": env("DB_PORT", "5432"),
         }
     }
+elif SUR_VERCEL:
+    DEMO_EPHEMERE = True
+    DATABASES = {"default": {"ENGINE": "django.db.backends.sqlite3", "NAME": "/tmp/shiftersuivi-demo.sqlite3"}}
 else:
     DATABASES = {
         "default": {

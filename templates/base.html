@@ -58,6 +58,7 @@
     </header>
 
     <main id="contenu" class="contenu">
+      {% if demo_ephemere %}<p class="bandeau-demo" role="note">{% icone 'alerte' %}Version de démonstration : les données de départ reviennent à chaque redémarrage et l'envoi de photos est désactivé.</p>{% endif %}
       {% if messages %}
       <div class="messages">
         {% for message in messages %}<p class="message message-{{ message.tags }}" role="status">{{ message }}</p>{% endfor %}

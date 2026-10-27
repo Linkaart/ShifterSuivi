@@ -7,7 +7,7 @@ import os
 
 from django.core.management import call_command
 from django.core.management.base import BaseCommand, CommandError
-from django.db import connection
+from django.conf import settings
 
 from garage.models import Client, OrdreReparation
 
@@ -16,10 +16,9 @@ class Command(BaseCommand):
     help = "Applique les migrations et charge la démonstration si SEED_DEMO=1 et que la base est vide."
 
     def handle(self, *args, **options):
-        if connection.vendor == "sqlite" and os.environ.get("VERCEL"):
-            raise CommandError(
-                "Aucune base PostgreSQL : reliez une base (Neon) au projet Vercel pour obtenir DATABASE_URL."
-            )
+        if settings.DEMO_EPHEMERE:
+            self.stdout.write("Pas de base reliée : démo éphémère, créée au démarrage de l'appli.")
+            return
         call_command("migrate", interactive=False, verbosity=1)
 
         if os.environ.get("SEED_DEMO") != "1":

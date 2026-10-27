@@ -354,6 +354,14 @@ a:hover > .plaque { box-shadow: 0 0 0 2px var(--signal); }
 .message-error { box-shadow: inset 3px 0 0 var(--danger); }
 .message-warning { box-shadow: inset 3px 0 0 var(--signal); }
 
+.bandeau-demo {
+  display: flex; align-items: center; gap: 10px;
+  margin: 0 0 20px; padding: 10px 14px;
+  border: 1px solid rgba(245, 179, 1, .45); border-radius: var(--rayon-petit);
+  background: rgba(245, 179, 1, .08); color: var(--craie); font-size: 14px;
+}
+.bandeau-demo .icone { color: var(--signal); }
+
 /* ----------------------------------------------------------------- filtres */
 
 .filtres { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-bottom: 16px; }

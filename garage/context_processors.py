@@ -4,7 +4,7 @@ from .models import STATUTS_ACTIFS, OrdreReparation
 
 
 def garage(request):
-    contexte = {"garage": settings.GARAGE}
+    contexte = {"garage": settings.GARAGE, "demo_ephemere": settings.DEMO_EPHEMERE}
     if request.user.is_authenticated:
         contexte["nb_atelier"] = OrdreReparation.objects.filter(statut__in=STATUTS_ACTIFS).count()
         url = request.resolver_match
