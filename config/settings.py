@@ -82,6 +82,10 @@ MIDDLEWARE = [
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
 
+if SUR_VERCEL:
+    # Sur Vercel, le CDN sert /static/ : WhiteNoise n'a rien à faire.
+    MIDDLEWARE.remove("whitenoise.middleware.WhiteNoiseMiddleware")
+
 ROOT_URLCONF = "config.urls"
 
 TEMPLATES = [
