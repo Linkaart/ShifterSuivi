@@ -1,0 +1,302 @@
+{% extends "base.html" %}{% load garage_tags %}
+{% block titre %}{{ ordre.numero }} {{ vehicule.immatriculation }}{% endblock %}
+{% block contenu %}
+<a class="fil" href="{% if ordre.est_actif %}{% url 'atelier' %}{% else %}{% url 'ordre_list' %}{% endif %}">{% icone 'retour' %}{% if ordre.est_actif %}Atelier{% else %}Ordres de réparation{% endif %}</a>
+
+<div class="fiche-entete">
+  <a href="{{ vehicule.get_absolute_url }}" title="Fiche du véhicule">{% plaque vehicule.immatriculation "grande" %}</a>
+  <div class="fiche-identite">
+    <h1>{{ vehicule.designation }}</h1>
+    <div class="fiche-meta">
+      {% statut ordre.statut %}
+      <span>{{ ordre.numero }}</span>
+      {% if user.gere_l_accueil %}<a href="{{ client.get_absolute_url }}">{{ client.nom_affiche }}</a>{% else %}<span>{{ client.nom_affiche }}</span>{% endif %}
+      {% if ordre.urgence == 'urgente' %}<span class="drapeau drapeau-signal">Urgent</span>{% endif %}
+      {% if ordre.en_retard %}<span class="drapeau">{% icone 'alerte' %}En retard, prévu le {{ ordre.fin_prevue_le|date:"j F" }}</span>{% endif %}
+    </div>
+  </div>
+  <div class="entete-actions">
+    {% if user.gere_l_accueil and ordre.est_actif %}<a class="bouton" href="{% url 'ordre_modifier' ordre.pk %}">{% icone 'modifier' %}Modifier l'entrée</a>{% endif %}
+    {% if facture %}<a class="bouton" href="{{ facture.get_absolute_url }}">{% icone 'facture' %}Facture {{ facture.numero }}</a>{% endif %}
+  </div>
+</div>
+
+<ol class="etapes" aria-label="Avancement">
+  {% for e in etapes %}<li class="{{ e.etat }}"{% if e.etat == 'actuel' %} aria-current="step"{% endif %}><span>{{ e.libelle }}</span></li>{% endfor %}
+</ol>
+
+{% if actions or peut_restituer %}
+<div class="commandes" id="statut">
+  <span>Étape suivante</span>
+  {% if ordre.statut == 'devis_envoye' and not ordre.accord_client and user.gere_l_accueil %}<a class="bouton bouton-principal" href="#accord">{% icone 'valide' %}Enregistrer l'accord du client</a>{% endif %}
+  {% for a in actions %}
+  <form method="post" action="{% url 'ordre_statut' ordre.pk %}"{% if ordre.statut == 'devis_envoye' and a.statut == 'pret' %} data-confirmer="Le client refuse le devis ? Le véhicule sera rendu sans travaux ni facture."{% endif %}>
+    {% csrf_token %}
+    <input type="hidden" name="statut" value="{{ a.statut }}">
+    <button class="bouton{% if a.principal %} bouton-principal{% elif ordre.statut == 'devis_envoye' and a.statut == 'pret' %} bouton-discret{% endif %}" type="submit"{% if a.raison %} disabled title="{{ a.raison }}"{% endif %}>{{ a.libelle }}</button>
+  </form>
+  {% endfor %}
+  {% if peut_restituer %}<a class="bouton{% if not actions %} bouton-principal{% endif %}" href="#restitution">Rendre le véhicule</a>{% endif %}
+  {% for raison in raisons %}<span class="raison">{{ raison }}</span>{% endfor %}
+</div>
+{% endif %}
+
+<div class="fiche">
+  <div class="fiche-principale">
+
+    <section class="panneau" aria-labelledby="titre-entree">
+      <div class="panneau-tete"><h2 id="titre-entree">Demande et entrée</h2><span class="discret petit">Reçu {{ ordre.arrive_le|date:"l j F à H\hi" }}{% if ordre.recu_par %} par {{ ordre.recu_par }}{% endif %}</span></div>
+      <div class="panneau-corps">
+        <blockquote class="citation">{{ ordre.demande_client }}</blockquote>
+        <dl class="infos" style="margin-top:16px">
+          <div><dt>Kilométrage à l'entrée</dt><dd class="chiffre">{{ ordre.km_entree|km }}</dd></div>
+          <div><dt>Carburant ou batterie</dt><dd>{{ ordre.get_niveau_carburant_display|default:"Non noté" }}</dd></div>
+          <div class="large"><dt>État à l'entrée</dt><dd class="texte">{{ ordre.etat_entree }}</dd></div>
+          {% if ordre.cles_accessoires %}<div><dt>Clés et accessoires</dt><dd>{{ ordre.cles_accessoires }}</dd></div>{% endif %}
+          {% if ordre.objets_laisses %}<div><dt>Objets laissés</dt><dd>{{ ordre.objets_laisses }}</dd></div>{% endif %}
+          {% if ordre.emplacement %}<div><dt>Emplacement</dt><dd>{{ ordre.emplacement }}</dd></div>{% endif %}
+          <div><dt>Fin prévue</dt><dd>{% if ordre.fin_prevue_le %}{{ ordre.fin_prevue_le|date:"l j F"|capfirst }} <span class="{% if ordre.en_retard %}alerte-texte{% else %}discret{% endif %}">({{ ordre.fin_prevue_le|echeance_relative }})</span>{% else %}Non fixée{% endif %}</dd></div>
+        </dl>
+      </div>
+    </section>
+
+    <section class="panneau" id="intervention" aria-labelledby="titre-intervention">
+      <div class="panneau-tete">
+        <h2 id="titre-intervention">Intervention</h2>
+        <span class="discret petit">{% if ordre.mecanicien %}Confié à {{ ordre.mecanicien }}{% else %}Pas encore attribué{% endif %}</span>
+      </div>
+      <div class="panneau-corps">
+        <dl class="infos infos-une">
+          <div><dt>Travaux prévus</dt><dd class="texte">{{ ordre.travaux_prevus|default:"À définir après diagnostic." }}</dd></div>
+          {% if ordre.diagnostic %}<div><dt>Diagnostic</dt><dd class="texte">{{ ordre.diagnostic }}</dd></div>{% endif %}
+          {% if ordre.travaux_supplementaires %}<div><dt>Travaux supplémentaires découverts</dt><dd class="texte">{{ ordre.travaux_supplementaires }}</dd><p class="aide petit discret" style="margin:4px 0 0">Accord écrit du client nécessaire avant de les réaliser.</p></div>{% endif %}
+          {% if ordre.notes_internes %}<div><dt>Notes internes</dt><dd class="texte">{{ ordre.notes_internes }}</dd></div>{% endif %}
+        </dl>
+      </div>
+      {% if peut_agir and ordre.est_actif %}
+      <details class="ajout-ligne"{% if form_intervention.errors %} open{% endif %}>
+        <summary>{% icone 'modifier' %}Mettre à jour l'intervention</summary>
+        <form method="post" action="{% url 'ordre_intervention' ordre.pk %}" class="formulaire">
+          {% csrf_token %}
+          <div class="grille">
+            {% if form_intervention.mecanicien %}{% include "garage/_champ.html" with champ=form_intervention.mecanicien classe="col-6" %}{% endif %}
+            {% include "garage/_champ.html" with champ=form_intervention.travaux_prevus classe="col-12" %}
+            {% include "garage/_champ.html" with champ=form_intervention.diagnostic classe="col-12" %}
+            {% include "garage/_champ.html" with champ=form_intervention.travaux_supplementaires classe="col-12" %}
+            {% include "garage/_champ.html" with champ=form_intervention.notes_internes classe="col-12" %}
+          </div>
+          <div class="barre-formulaire"><button class="bouton bouton-principal" type="submit">Enregistrer l'intervention</button></div>
+        </form>
+      </details>
+      {% endif %}
+    </section>
+
+    <section class="panneau" id="lignes" aria-labelledby="titre-lignes">
+      <div class="panneau-tete">
+        <h2 id="titre-lignes">Pièces et main-d'œuvre <span class="compte">{{ lignes|length }}</span></h2>
+        {% if ordre.est_facture %}<span class="drapeau drapeau-calme">Facturé, lignes figées</span>{% endif %}
+      </div>
+      {% if lignes %}
+      <div class="defile">
+        <table class="tableau lignes">
+          <thead><tr><th class="masque-mobile">Type</th><th>Désignation</th><th class="num">Qté</th><th class="num">PU HT</th><th class="num">TVA</th><th class="num">Total HT</th>{% if peut_modifier_lignes %}<th><span class="sr">Retirer</span></th>{% endif %}</tr></thead>
+          <tbody>
+            {% for l in lignes %}
+            <tr>
+              <td class="type-ligne masque-mobile">{{ l.get_type_ligne_display }}</td>
+              <td class="cellule-double"><span>{{ l.designation }}</span>{% if l.reference or l.origine %}<small>{% if l.reference %}Réf. {{ l.reference }}{% endif %}{% if l.reference and l.origine %}, {% endif %}{% if l.origine %}{{ l.get_origine_display|lower }}{% endif %}</small>{% endif %}</td>
+              <td class="num">{{ l.quantite|nombre }}{% if l.type_ligne == 'main_oeuvre' %} h{% endif %}</td>
+              <td class="num">{{ l.prix_unitaire_ht|euros }}</td>
+              <td class="num discret">{{ l.taux_tva|pourcent }}</td>
+              <td class="num">{{ l.total_ht|euros }}</td>
+              {% if peut_modifier_lignes %}
+              <td class="num">
+                <form method="post" action="{% url 'ligne_supprimer' ordre.pk l.pk %}" data-confirmer="Retirer « {{ l.designation }} » ?">
+                  {% csrf_token %}<button class="bouton bouton-danger bouton-petit bouton-icone" type="submit" title="Retirer cette ligne">{% icone 'supprimer' %}<span class="sr">Retirer {{ l.designation }}</span></button>
+                </form>
+              </td>
+              {% endif %}
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      <div class="totaux">
+        <div><span>Total HT</span><span>{{ ordre.total_ht|euros }}</span></div>
+        {% for v in ventilation %}<div><span>TVA {{ v.taux|pourcent }}</span><span>{{ v.tva|euros }}</span></div>{% endfor %}
+        <div class="ttc"><span>Total TTC</span><span>{{ ordre.total_ttc|euros }}</span></div>
+      </div>
+      {% else %}
+      <p class="vide">Aucune pièce ni main-d'œuvre pour l'instant. Ajoutez les lignes au fil du diagnostic : elles forment le devis puis la facture.</p>
+      {% endif %}
+
+      {% if peut_modifier_lignes %}
+      <details class="ajout-ligne"{% if not lignes %} open{% endif %}>
+        <summary>{% icone 'plus' %}Ajouter une ligne</summary>
+        <form method="post" action="{% url 'ligne_ajouter' ordre.pk %}" class="formulaire" data-form-ligne data-taux-horaire="{{ taux_horaire }}">
+          {% csrf_token %}
+          <div class="grille">
+            {% include "garage/_champ.html" with champ=form_ligne.type_ligne classe="col-3" %}
+            {% include "garage/_champ.html" with champ=form_ligne.designation classe="col-6" %}
+            {% include "garage/_champ.html" with champ=form_ligne.reference classe="col-3" %}
+            {% include "garage/_champ.html" with champ=form_ligne.quantite classe="col-3" %}
+            {% include "garage/_champ.html" with champ=form_ligne.prix_unitaire_ht classe="col-3" %}
+            {% include "garage/_champ.html" with champ=form_ligne.taux_tva classe="col-2" %}
+            <div class="col-4" data-champ-origine>{% include "garage/_champ.html" with champ=form_ligne.origine %}</div>
+            {% include "garage/_champ.html" with champ=form_ligne.fournisseur classe="col-6" %}
+            {% include "garage/_champ.html" with champ=form_ligne.commandee_le classe="col-3" %}
+          </div>
+          <div class="barre-formulaire"><button class="bouton bouton-principal" type="submit">Ajouter la ligne</button><span class="tres-discret petit">Main-d'œuvre : quantité en heures, taux horaire {{ taux_horaire }} € HT proposé.</span></div>
+        </form>
+      </details>
+      {% endif %}
+    </section>
+
+    <section class="panneau" id="documents" aria-labelledby="titre-documents">
+      <div class="panneau-tete"><h2 id="titre-documents">Photos et documents <span class="compte">{{ nb_documents }}</span></h2></div>
+      <div class="panneau-corps">
+        {% if photos %}
+        <div class="photos">
+          {% for d in photos %}
+          <figure style="margin:0"><a href="{% url 'document_voir' d.pk %}" target="_blank" rel="noopener"><img src="{% url 'document_voir' d.pk %}" alt="{{ d.get_type_document_display }}, ajoutée le {{ d.ajoute_le|date:'j F' }}" loading="lazy"><figcaption>{{ d.get_type_document_display }}</figcaption></a></figure>
+          {% endfor %}
+        </div>
+        {% endif %}
+        {% if fichiers %}
+        <ul class="fichiers-liste"{% if photos %} style="margin-top:12px"{% endif %}>
+          {% for d in fichiers %}<li>{% icone 'fichier' %}<a href="{% url 'document_voir' d.pk %}" target="_blank" rel="noopener">{{ d }}</a><span class="discret petit">{{ d.get_type_document_display }}, {{ d.ajoute_le|date:"j M" }}</span></li>{% endfor %}
+        </ul>
+        {% endif %}
+        {% if not photos and not fichiers %}<p class="discret">Aucune photo. Les photos de l'état à l'entrée protègent le garage en cas de litige.</p>{% endif %}
+      </div>
+      {% if peut_agir %}
+      <div class="panneau-pied">
+        <form method="post" action="{% url 'ordre_documents' ordre.pk %}" enctype="multipart/form-data" class="barre-formulaire">
+          {% csrf_token %}
+          <label class="sr" for="{{ form_document.type_document.id_for_label }}">Type de document</label>
+          <select class="champ-seul" style="width:auto" name="{{ form_document.type_document.html_name }}" id="{{ form_document.type_document.id_for_label }}">
+            {% for valeur, libelle in form_document.fields.type_document.choices %}<option value="{{ valeur }}"{% if valeur == form_document.type_document.initial %} selected{% endif %}>{{ libelle }}</option>{% endfor %}
+          </select>
+          <div class="envoi">{{ form_document.fichiers }}<label class="bouton" for="{{ form_document.fichiers.id_for_label }}">{% icone 'photo' %}Choisir des fichiers</label><span class="fichiers-choisis" id="{{ form_document.fichiers.auto_id }}_liste" aria-live="polite">Aucun fichier choisi</span></div>
+          <button class="bouton" type="submit">{% icone 'envoyer_fichier' %}Ajouter</button>
+        </form>
+      </div>
+      {% endif %}
+    </section>
+  </div>
+
+  <aside class="fiche-cote">
+    <section class="panneau" aria-labelledby="titre-vehicule">
+      <div class="panneau-tete"><h2 id="titre-vehicule">Client et véhicule</h2><a class="tous" href="{{ vehicule.get_absolute_url }}">Fiche</a></div>
+      <div class="panneau-corps">
+        <p style="margin-bottom:8px"><strong>{{ client.nom_affiche }}</strong>{% if client.type_client == 'professionnel' and client.prenom %}<br><span class="discret">{{ client.nom|upper }} {{ client.prenom }}</span>{% endif %}</p>
+        {% if user.gere_l_accueil %}
+        <div class="contact">
+          <a href="tel:{{ client.telephone|tel }}">{% icone 'telephone' %}{{ client.telephone }}</a>
+          {% if client.email %}<a href="mailto:{{ client.email }}">{% icone 'courriel' %}{{ client.email }}</a>{% endif %}
+          <span class="discret petit">Préfère : {{ client.get_contact_prefere_display|lower }}</span>
+        </div>
+        {% endif %}
+        <dl class="infos" style="margin-top:16px">
+          <div><dt>Énergie</dt><dd>{{ vehicule.get_energie_display }}</dd></div>
+          <div><dt>Mise en circulation</dt><dd>{{ vehicule.date_mise_circulation|date:"m/Y"|default:"Non notée" }}</dd></div>
+          {% if vehicule.version %}<div class="large"><dt>Version</dt><dd>{{ vehicule.version }}</dd></div>{% endif %}
+          {% if vehicule.vin %}<div class="large"><dt>VIN</dt><dd class="chiffre">{{ vehicule.vin }}</dd></div>{% endif %}
+          {% if vehicule.prochain_ct %}<div class="large"><dt>Prochain contrôle technique</dt><dd>{{ vehicule.prochain_ct|date:"j F Y" }} <span class="discret">({{ vehicule.prochain_ct|echeance_relative }})</span></dd></div>{% endif %}
+        </dl>
+      </div>
+    </section>
+
+    <section class="panneau" id="accord" aria-labelledby="titre-accord">
+      <div class="panneau-tete"><h2 id="titre-accord">Accord du client</h2></div>
+      <div class="panneau-corps">
+        {% if ordre.accord_client %}
+        <div class="etat-accord succes-texte">{% icone 'valide' %}<span>Accord donné le {{ ordre.accord_le|date:"j F à H\hi" }}<br><span class="discret">{{ ordre.get_accord_moyen_display }}</span></span></div>
+        {% elif ordre.statut == 'pret' or ordre.statut == 'restitue' %}
+        <div class="etat-accord discret">{% icone 'alerte' %}<span>Devis refusé par le client : aucun travail réalisé.</span></div>
+        {% else %}
+        <div class="etat-accord discret">{% icone 'horloge' %}<span>Pas encore d'accord. Les travaux ne démarrent qu'après l'accord du client.</span></div>
+        {% endif %}
+        {% if ordre.reemploi_propose %}<p class="petit discret">Pièces de réemploi proposées{% if ordre.reemploi_choix %} : {{ ordre.get_reemploi_choix_display|lower }}{% endif %}.</p>{% endif %}
+        {% if peut_enregistrer_accord %}
+        <form method="post" action="{% url 'ordre_accord' ordre.pk %}" class="formulaire">
+          {% csrf_token %}
+          {% include "garage/_champ.html" with champ=form_accord.accord_moyen %}
+          {% include "garage/_champ.html" with champ=form_accord.reemploi_propose %}
+          {% include "garage/_champ.html" with champ=form_accord.reemploi_choix %}
+          <button class="bouton bouton-plein" type="submit">{% icone 'valide' %}Enregistrer l'accord</button>
+        </form>
+        {% endif %}
+      </div>
+    </section>
+
+    {% if user.gere_l_accueil %}
+    <section class="panneau" aria-labelledby="titre-facture">
+      <div class="panneau-tete"><h2 id="titre-facture">Facture</h2></div>
+      <div class="panneau-corps">
+        {% if facture %}
+        <p><a class="principal-lien" href="{{ facture.get_absolute_url }}"><strong>{{ facture.numero }}</strong></a> du {{ facture.emise_le|date:"j F Y" }}</p>
+        <p class="chiffre" style="font-size:24px;margin-bottom:6px">{{ facture.total_ttc|euros }} <span class="discret petit" style="font-family:var(--texte)">TTC</span></p>
+        <span class="drapeau {% if facture.statut_paiement == 'payee' %}drapeau-ok{% elif facture.statut_paiement == 'partielle' %}drapeau-signal{% endif %}">{{ facture.get_statut_paiement_display }}</span>
+        {% elif peut_facturer %}
+        <p class="discret">Les montants de l'OR seront figés dans une facture numérotée.</p>
+        <form method="post" action="{% url 'ordre_facturer' ordre.pk %}" data-confirmer="Créer la facture ? Les lignes ne pourront plus être modifiées.">
+          {% csrf_token %}<button class="bouton bouton-principal bouton-plein" type="submit">{% icone 'facture' %}Créer la facture de {{ ordre.total_ttc|euros }}</button>
+        </form>
+        {% elif not ordre.accord_client and ordre.statut == 'pret' %}
+        <p class="discret">Devis refusé : rien à facturer.</p>
+        {% else %}
+        <p class="discret">La facture se crée une fois les travaux terminés{% if not lignes %}, à partir des lignes de l'OR{% endif %}.</p>
+        {% endif %}
+      </div>
+    </section>
+    {% endif %}
+
+    {% if ordre.statut == 'pret' and user.gere_l_accueil %}
+    <section class="panneau panneau-signal" id="restitution" aria-labelledby="titre-restitution">
+      <div class="panneau-tete"><h2 id="titre-restitution">Rendre le véhicule</h2></div>
+      <div class="panneau-corps">
+        {% if restitution_bloquee %}
+        <p class="discret">Créez d'abord la facture, puis rendez le véhicule.</p>
+        {% else %}
+        <form method="post" action="{% url 'ordre_restitution' ordre.pk %}" class="formulaire">
+          {% csrf_token %}
+          {% include "garage/_champ.html" with champ=form_restitution.km_sortie %}
+          {% include "garage/_champ.html" with champ=form_restitution.travaux_realises %}
+          {% include "garage/_champ.html" with champ=form_restitution.pieces_usagees_rendues %}
+          <button class="bouton bouton-principal bouton-plein" type="submit">{% icone 'cle' %}Remettre les clés</button>
+        </form>
+        {% endif %}
+      </div>
+    </section>
+    {% elif ordre.statut == 'restitue' %}
+    <section class="panneau" aria-labelledby="titre-sortie">
+      <div class="panneau-tete"><h2 id="titre-sortie">Sortie</h2></div>
+      <div class="panneau-corps">
+        <dl class="infos">
+          <div><dt>Rendu le</dt><dd>{{ ordre.restitue_le|date:"j F Y" }}</dd></div>
+          <div><dt>Kilométrage</dt><dd class="chiffre">{{ ordre.km_sortie|km|default:"Non noté" }}</dd></div>
+          {% if ordre.travaux_realises %}<div class="large"><dt>Travaux réalisés</dt><dd class="texte">{{ ordre.travaux_realises }}</dd></div>{% endif %}
+          <div class="large"><dt>Pièces usagées</dt><dd>{% if ordre.pieces_usagees_rendues %}Rendues au client{% else %}Gardées par le garage{% endif %}</dd></div>
+        </dl>
+      </div>
+    </section>
+    {% endif %}
+
+    <section class="panneau" aria-labelledby="titre-historique">
+      <div class="panneau-tete"><h2 id="titre-historique">Historique</h2></div>
+      <div class="panneau-corps">
+        <ol class="historique">
+          {% for h in historique %}
+          <li class="statut-{{ h.nouveau }}">
+            <strong>{{ h.get_nouveau_display }}</strong>
+            <div class="quand">{{ h.le|date:"j M, H\hi" }}{% if h.par %}, {{ h.par }}{% endif %}</div>
+            {% if h.commentaire %}<div class="petit discret">{{ h.commentaire }}</div>{% endif %}
+          </li>
+          {% endfor %}
+        </ol>
+      </div>
+    </section>
+  </aside>
+</div>
+{% endblock %}

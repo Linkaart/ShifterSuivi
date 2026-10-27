@@ -1,0 +1,35 @@
+{% extends "base.html" %}{% load garage_tags %}
+{% block titre %}Modifier l'entrée {{ ordre.numero }}{% endblock %}
+{% block contenu %}
+<a class="fil" href="{{ ordre.get_absolute_url }}">{% icone 'retour' %}{{ ordre.numero }}</a>
+<div class="entete">
+  <div class="entete-texte">
+    <h1>Modifier l'entrée</h1>
+    <p>{{ ordre.vehicule.designation }}, {{ ordre.client.nom_affiche }}</p>
+  </div>
+  {% plaque ordre.vehicule.immatriculation "grande" %}
+</div>
+<form method="post" class="formulaire">
+  {% csrf_token %}
+  <fieldset class="groupe">
+    <legend>Entrée à l'atelier</legend>
+    <div class="grille">
+      {% include "garage/_champ.html" with champ=form.km_entree classe="col-4" %}
+      {% include "garage/_champ.html" with champ=form.niveau_carburant classe="col-8" %}
+      {% include "garage/_champ.html" with champ=form.demande_client classe="col-6" %}
+      {% include "garage/_champ.html" with champ=form.etat_entree classe="col-6" %}
+      {% include "garage/_champ.html" with champ=form.cles_accessoires classe="col-6" %}
+      {% include "garage/_champ.html" with champ=form.objets_laisses classe="col-6" %}
+      {% include "garage/_champ.html" with champ=form.emplacement classe="col-4" %}
+      {% include "garage/_champ.html" with champ=form.fin_prevue_le classe="col-4" %}
+      {% include "garage/_champ.html" with champ=form.urgence classe="col-4" %}
+      {% include "garage/_champ.html" with champ=form.mecanicien classe="col-6" %}
+      {% include "garage/_champ.html" with champ=form.travaux_prevus classe="col-12" %}
+    </div>
+  </fieldset>
+  <div class="pied-formulaire">
+    <a class="bouton bouton-discret" href="{{ ordre.get_absolute_url }}">Annuler</a>
+    <button class="bouton bouton-principal" type="submit">Enregistrer</button>
+  </div>
+</form>
+{% endblock %}

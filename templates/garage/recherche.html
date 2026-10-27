@@ -1,0 +1,47 @@
+{% extends "base.html" %}{% load garage_tags %}
+{% block titre %}Recherche{% endblock %}
+{% block contenu %}
+<div class="entete">
+  <div class="entete-texte">
+    <h1>Recherche</h1>
+    <p>{% if q %}Résultats pour « {{ q }} »{% else %}Tapez une plaque, un nom ou un numéro d'OR dans la barre du haut.{% endif %}</p>
+  </div>
+</div>
+
+{% if q %}
+{% if not vehicules and not clients and not ordres %}
+<div class="panneau"><div class="vide"><p>Rien ne correspond à « {{ q }} ». Vérifiez la plaque ou essayez le nom du client.</p>{% if user.gere_l_accueil %}<a class="bouton" href="{% url 'reception' %}?immat={{ q|urlencode }}">Faire une réception pour cette plaque</a>{% endif %}</div></div>
+{% endif %}
+
+{% if vehicules %}
+<section class="panneau" aria-labelledby="titre-vehicules">
+  <div class="panneau-tete"><h2 id="titre-vehicules">Véhicules <span class="compte">{{ vehicules|length }}</span></h2></div>
+  <ul class="liste-vehicules">
+    {% for v in vehicules %}<li><a href="{{ v.get_absolute_url }}">{% plaque v.immatriculation %}<span class="ligne-1">{{ v.designation }}</span><span class="ligne-2">{{ v.client.nom_affiche }}</span></a></li>{% endfor %}
+  </ul>
+</section>
+{% endif %}
+
+{% if ordres %}
+<section class="panneau" aria-labelledby="titre-ordres">
+  <div class="panneau-tete"><h2 id="titre-ordres">Ordres de réparation <span class="compte">{{ ordres|length }}</span></h2></div>
+  <ul class="liste-vehicules">
+    {% for o in ordres %}<li><a href="{{ o.get_absolute_url }}">{% plaque o.vehicule.immatriculation %}<span class="ligne-1">{{ o.numero }}</span><span class="ligne-2">{{ o.get_statut_display }}, {{ o.client.nom_affiche }}</span></a></li>{% endfor %}
+  </ul>
+</section>
+{% endif %}
+
+{% if clients %}
+<section class="panneau" aria-labelledby="titre-clients">
+  <div class="panneau-tete"><h2 id="titre-clients">Clients <span class="compte">{{ clients|length }}</span></h2></div>
+  <div class="defile">
+    <table class="tableau">
+      <tbody>
+        {% for c in clients %}<tr><td><a class="principal-lien" href="{{ c.get_absolute_url }}">{{ c.nom_affiche }}</a></td><td>{{ c.telephone }}</td><td>{{ c.ville }}</td><td class="num">{{ c.nb_vehicules }} véhicule{{ c.nb_vehicules|pluralize }}</td></tr>{% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endif %}
+{% endif %}
+{% endblock %}

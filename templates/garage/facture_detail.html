@@ -1,0 +1,100 @@
+{% extends "base.html" %}{% load garage_tags %}
+{% block titre %}Facture {{ facture.numero }}{% endblock %}
+{% block contenu %}
+<div class="entete">
+  <div class="entete-texte">
+    <a class="fil" href="{{ ordre.get_absolute_url }}">{% icone 'retour' %}{{ ordre.numero }}</a>
+    <h1>Facture {{ facture.numero }}</h1>
+  </div>
+  <div class="entete-actions"><button class="bouton" type="button" data-imprimer>{% icone 'imprimer' %}Imprimer ou enregistrer en PDF</button></div>
+</div>
+
+<div class="facture-cadre">
+  <article class="feuille" aria-label="Facture {{ facture.numero }}">
+    <header class="feuille-tete">
+      <div class="emetteur">
+        <strong>{{ garage.nom }}</strong>
+        <div class="adresse">{{ garage.adresse }}{% if garage.code_postal or garage.ville %}
+{{ garage.code_postal }} {{ garage.ville }}{% endif %}</div>
+        {% if garage.telephone %}<div>Tél. {{ garage.telephone }}</div>{% endif %}
+        {% if garage.email %}<div>{{ garage.email }}</div>{% endif %}
+        {% if garage.siret %}<div class="muet">SIRET {{ garage.siret }}</div>{% endif %}
+        {% if garage.tva_intracom %}<div class="muet">TVA intracommunautaire {{ garage.tva_intracom }}</div>{% endif %}
+      </div>
+      <div style="text-align:right">
+        <h1>Facture</h1>
+        <div><strong>N° {{ facture.numero }}</strong></div>
+        <div>Émise le {{ facture.emise_le|date:"j F Y" }}</div>
+        <div class="muet">Ordre de réparation {{ ordre.numero }}</div>
+      </div>
+    </header>
+
+    <div class="feuille-parties">
+      <section>
+        <h2>Facturé à</h2>
+        <strong>{{ facture.client_nom }}</strong>
+        <div class="adresse">{{ facture.client_adresse }}</div>
+        {% if facture.client_siret %}<div class="muet">SIRET {{ facture.client_siret }}</div>{% endif %}
+      </section>
+      <section>
+        <h2>Véhicule</h2>
+        <div style="margin-bottom:6px">{% plaque vehicule.immatriculation %}</div>
+        <div>{{ vehicule.designation }}{% if vehicule.version %}, {{ vehicule.version }}{% endif %}</div>
+        {% if vehicule.vin %}<div class="muet">VIN {{ vehicule.vin }}</div>{% endif %}
+        <div class="muet">Kilométrage : {{ ordre.km_sortie|default:ordre.km_entree|km }}</div>
+      </section>
+    </div>
+
+    <table>
+      <thead><tr><th>Désignation</th><th class="num">Qté</th><th class="num">PU HT</th><th class="num">TVA</th><th class="num">Total HT</th></tr></thead>
+      <tbody>
+        {% for l in lignes %}
+        <tr>
+          <td>{{ l.designation }}{% if l.reference %} <span class="muet">réf. {{ l.reference }}</span>{% endif %}{% if l.origine == 'reemploi' %} <span class="muet">(pièce de réemploi)</span>{% endif %}</td>
+          <td class="num">{{ l.quantite|nombre }}{% if l.type_ligne == 'main_oeuvre' %} h{% endif %}</td>
+          <td class="num">{{ l.prix_unitaire_ht|euros }}</td>
+          <td class="num">{{ l.taux_tva|pourcent }}</td>
+          <td class="num">{{ l.total_ht|euros }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+
+    <div class="feuille-totaux">
+      <div><span>Total HT</span><span>{{ facture.total_ht|euros }}</span></div>
+      {% for v in ventilation %}<div><span>TVA {{ v.taux|pourcent }} sur {{ v.base|euros }}</span><span>{{ v.tva|euros }}</span></div>{% endfor %}
+      <div class="ttc"><span>Total TTC</span><span>{{ facture.total_ttc|euros }}</span></div>
+      {% if facture.montant_regle %}
+      <div><span>Déjà réglé</span><span>{{ facture.montant_regle|euros }}</span></div>
+      <div><strong>Reste à payer</strong><strong>{{ facture.reste_a_payer|euros }}</strong></div>
+      {% endif %}
+    </div>
+
+    <footer class="feuille-mentions">
+      <p>Paiement à réception de la facture. Pas d'escompte pour paiement anticipé.</p>
+      {% if facture.client_professionnel %}<p>En cas de retard de paiement : pénalités au taux de trois fois l'intérêt légal et indemnité forfaitaire de 40 € pour frais de recouvrement.</p>{% endif %}
+      {% if ordre.pieces_usagees_rendues %}<p>Les pièces usagées ont été rendues au client.</p>{% endif %}
+    </footer>
+  </article>
+
+  <aside class="pas-imprime">
+    <section class="panneau" aria-labelledby="titre-paiement">
+      <div class="panneau-tete"><h2 id="titre-paiement">Paiement</h2><span class="drapeau {% if facture.statut_paiement == 'payee' %}drapeau-ok{% elif facture.statut_paiement == 'partielle' %}drapeau-signal{% endif %}">{{ facture.get_statut_paiement_display }}</span></div>
+      <div class="panneau-corps">
+        {% if facture.statut_paiement == 'payee' %}
+        <p>Réglée le {{ facture.payee_le|date:"j F Y" }}{% if facture.mode_paiement %}, {{ facture.get_mode_paiement_display|lower }}{% endif %}.</p>
+        {% else %}
+        <p class="chiffre" style="font-size:24px;margin-bottom:12px">{{ facture.reste_a_payer|euros }} <span class="discret petit" style="font-family:var(--texte)">à encaisser</span></p>
+        <form method="post" action="{% url 'facture_paiement' facture.pk %}" class="formulaire">
+          {% csrf_token %}
+          {% include "garage/_champ.html" with champ=form_paiement.montant %}
+          {% include "garage/_champ.html" with champ=form_paiement.mode %}
+          {% include "garage/_champ.html" with champ=form_paiement.le %}
+          <button class="bouton bouton-principal bouton-plein" type="submit">Enregistrer le paiement</button>
+        </form>
+        {% endif %}
+      </div>
+    </section>
+  </aside>
+</div>
+{% endblock %}

@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+{% block titre %}Page introuvable{% endblock %}
+{% block contenu %}
+<div class="panneau" style="max-width:560px"><div class="vide">
+  <h1 style="margin-bottom:10px">Page introuvable</h1>
+  <p>Cette fiche n'existe pas ou a été déplacée. Cherchez la plaque dans la barre du haut.</p>
+  <a class="bouton" href="{% url 'tableau_de_bord' %}">Revenir au tableau de bord</a>
+</div></div>
+{% endblock %}
+{% block contenu_public %}<p style="padding:32px">Page introuvable. <a href="{% url 'connexion' %}">Se connecter</a></p>{% endblock %}

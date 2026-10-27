@@ -1,0 +1,42 @@
+{% extends "base.html" %}{% load garage_tags %}
+{% block titre %}{% if client %}Modifier {{ client.nom_affiche }}{% else %}Nouveau client{% endif %}{% endblock %}
+{% block contenu %}
+<a class="fil" href="{% if client %}{{ client.get_absolute_url }}{% else %}{% url 'client_list' %}{% endif %}">{% icone 'retour' %}{% if client %}{{ client.nom_affiche }}{% else %}Clients{% endif %}</a>
+<div class="entete">
+  <div class="entete-texte">
+    <h1>{% if client %}Modifier le client{% else %}Nouveau client{% endif %}</h1>
+    <p>L'adresse apparaît sur les factures. Le téléphone sert à prévenir quand la voiture est prête.</p>
+  </div>
+</div>
+<form method="post" class="formulaire">
+  {% csrf_token %}
+  {% if form.non_field_errors %}<div class="erreurs-formulaire">{{ form.non_field_errors|join:" " }}</div>{% endif %}
+  <fieldset class="groupe">
+    <legend>Identité</legend>
+    <div class="grille">
+      {% include "garage/_champ.html" with champ=form.type_client classe="col-12" %}
+      {% include "garage/_champ.html" with champ=form.nom classe="col-4" %}
+      {% include "garage/_champ.html" with champ=form.prenom classe="col-4" %}
+      {% include "garage/_champ.html" with champ=form.telephone classe="col-4" %}
+      {% include "garage/_champ.html" with champ=form.raison_sociale classe="col-6" %}
+      {% include "garage/_champ.html" with champ=form.siret classe="col-6" %}
+    </div>
+  </fieldset>
+  <fieldset class="groupe">
+    <legend>Adresse et contact</legend>
+    <div class="grille">
+      {% include "garage/_champ.html" with champ=form.adresse classe="col-6" %}
+      {% include "garage/_champ.html" with champ=form.code_postal classe="col-2" %}
+      {% include "garage/_champ.html" with champ=form.ville classe="col-4" %}
+      {% include "garage/_champ.html" with champ=form.email classe="col-6" %}
+      {% include "garage/_champ.html" with champ=form.contact_prefere classe="col-6" %}
+      {% include "garage/_champ.html" with champ=form.accord_rappels classe="col-12" %}
+      {% include "garage/_champ.html" with champ=form.notes classe="col-12" %}
+    </div>
+  </fieldset>
+  <div class="pied-formulaire">
+    <a class="bouton bouton-discret" href="{% if client %}{{ client.get_absolute_url }}{% else %}{% url 'client_list' %}{% endif %}">Annuler</a>
+    <button class="bouton bouton-principal" type="submit">Enregistrer le client</button>
+  </div>
+</form>
+{% endblock %}

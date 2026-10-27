@@ -1,0 +1,30 @@
+{% extends "base.html" %}{% load garage_tags %}
+{% block titre %}{% if echeance %}Modifier l'échéance{% else %}Nouvelle échéance{% endif %}{% endblock %}
+{% block contenu %}
+<a class="fil" href="{% if vehicule %}{{ vehicule.get_absolute_url }}{% else %}{% url 'echeance_list' %}{% endif %}">{% icone 'retour' %}{% if vehicule %}{{ vehicule.immatriculation }}{% else %}Échéances{% endif %}</a>
+<div class="entete">
+  <div class="entete-texte">
+    <h1>{% if echeance %}Modifier l'échéance{% else %}Nouvelle échéance{% endif %}</h1>
+    <p>Indiquez une date, un kilométrage, ou les deux : la première limite atteinte compte.</p>
+  </div>
+  {% if vehicule %}{% plaque vehicule.immatriculation "grande" %}{% endif %}
+</div>
+<form method="post" class="formulaire" style="max-width:760px">
+  {% csrf_token %}
+  {% if form.non_field_errors %}<div class="erreurs-formulaire">{{ form.non_field_errors|join:" " }}</div>{% endif %}
+  <fieldset class="groupe">
+    <legend>Échéance</legend>
+    <div class="grille">
+      {% if form.vehicule %}{% include "garage/_champ.html" with champ=form.vehicule classe="col-12" %}{% endif %}
+      {% include "garage/_champ.html" with champ=form.type classe="col-4" %}
+      {% include "garage/_champ.html" with champ=form.prevue_le classe="col-4" %}
+      {% include "garage/_champ.html" with champ=form.km_prevu classe="col-4" %}
+      {% include "garage/_champ.html" with champ=form.notes classe="col-12" %}
+    </div>
+  </fieldset>
+  <div class="pied-formulaire">
+    <a class="bouton bouton-discret" href="{% if vehicule %}{{ vehicule.get_absolute_url }}{% else %}{% url 'echeance_list' %}{% endif %}">Annuler</a>
+    <button class="bouton bouton-principal" type="submit">Enregistrer l'échéance</button>
+  </div>
+</form>
+{% endblock %}

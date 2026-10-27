@@ -1,0 +1,136 @@
+{% extends "base.html" %}{% load garage_tags %}
+{% block titre %}{{ vehicule.immatriculation }}{% endblock %}
+{% block contenu %}
+<a class="fil" href="{% url 'vehicule_list' %}">{% icone 'retour' %}Véhicules</a>
+<div class="fiche-entete">
+  {% plaque vehicule.immatriculation "grande" %}
+  <div class="fiche-identite">
+    <h1>{{ vehicule.designation }}</h1>
+    <div class="fiche-meta">
+      {% if vehicule.version %}<span>{{ vehicule.version }}</span>{% endif %}
+      <span>{{ vehicule.get_energie_display }}</span>
+      {% if vehicule.annee %}<span>{{ vehicule.annee }}</span>{% endif %}
+      <span class="chiffre">{{ vehicule.kilometrage|km }}</span>
+      {% if passage %}<a href="{{ passage.get_absolute_url }}">{% statut passage.statut %}</a>{% endif %}
+    </div>
+  </div>
+  {% if user.gere_l_accueil %}
+  <div class="entete-actions">
+    <a class="bouton" href="{% url 'vehicule_modifier' vehicule.pk %}">{% icone 'modifier' %}Modifier</a>
+    {% if passage %}<a class="bouton bouton-principal" href="{{ passage.get_absolute_url }}">Voir le passage en cours</a>
+    {% else %}<a class="bouton bouton-principal" href="{% url 'reception' %}?vehicule={{ vehicule.pk }}">{% icone 'plus' %}Nouvelle réception</a>{% endif %}
+  </div>
+  {% endif %}
+</div>
+
+<div class="fiche">
+  <div class="fiche-principale">
+    <section class="panneau" aria-labelledby="titre-passages">
+      <div class="panneau-tete"><h2 id="titre-passages">Passages à l'atelier <span class="compte">{{ ordres|length }}</span></h2></div>
+      {% if ordres %}
+      <div class="defile">
+        <table class="tableau">
+          <thead><tr><th>N° d'OR</th><th>Arrivé</th><th>Travaux</th><th class="num">Km</th><th>Statut</th><th class="num">Total TTC</th></tr></thead>
+          <tbody>
+            {% for o in ordres %}
+            <tr>
+              <td><a class="principal-lien" href="{{ o.get_absolute_url }}">{{ o.numero }}</a></td>
+              <td class="nowrap">{{ o.arrive_le|date:"j M Y" }}</td>
+              <td>{{ o.travaux_realises|default:o.travaux_prevus|default:o.demande_client|truncatechars:70 }}</td>
+              <td class="num">{{ o.km_entree|km }}</td>
+              <td>{% statut o.statut %}</td>
+              <td class="num">{% if o.lignes.all %}{{ o.total_ttc|euros }}{% else %}<span class="tres-discret">—</span>{% endif %}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}<p class="vide">Ce véhicule n'est encore jamais passé à l'atelier.</p>{% endif %}
+    </section>
+
+    <section class="panneau" aria-labelledby="titre-carte-grise">
+      <div class="panneau-tete"><h2 id="titre-carte-grise">Carte grise et caractéristiques</h2></div>
+      <div class="panneau-corps">
+        <dl class="infos">
+          <div><dt>Immatriculation (A)</dt><dd class="chiffre">{{ vehicule.immatriculation }}</dd></div>
+          <div><dt>1re mise en circulation (B)</dt><dd>{{ vehicule.date_mise_circulation|date:"j F Y"|default:"Non notée" }}</dd></div>
+          <div><dt>Marque (D.1)</dt><dd>{{ vehicule.marque }}</dd></div>
+          <div><dt>Modèle (D.3)</dt><dd>{{ vehicule.modele }}</dd></div>
+          <div class="large"><dt>Version (D.2)</dt><dd>{{ vehicule.version|default:"Non notée" }}</dd></div>
+          <div class="large"><dt>Numéro VIN (E)</dt><dd class="chiffre">{{ vehicule.vin|default:"Non noté" }}</dd></div>
+          <div><dt>Énergie (P.3)</dt><dd>{{ vehicule.get_energie_display }}</dd></div>
+          <div><dt>Boîte de vitesses</dt><dd>{{ vehicule.get_boite_display|default:"Non notée" }}</dd></div>
+          {% if vehicule.puissance_fiscale %}<div><dt>Puissance fiscale (P.6)</dt><dd>{{ vehicule.puissance_fiscale }} CV</dd></div>{% endif %}
+          {% if vehicule.cylindree %}<div><dt>Cylindrée (P.1)</dt><dd>{{ vehicule.cylindree }} cm³</dd></div>{% endif %}
+          {% if vehicule.couleur %}<div><dt>Couleur</dt><dd>{{ vehicule.couleur }}</dd></div>{% endif %}
+          {% if vehicule.code_moteur %}<div><dt>Code moteur</dt><dd>{{ vehicule.code_moteur }}</dd></div>{% endif %}
+          {% if vehicule.dimensions_pneus %}<div><dt>Pneus</dt><dd>{{ vehicule.dimensions_pneus }}</dd></div>{% endif %}
+          {% if vehicule.notes %}<div class="large"><dt>Notes</dt><dd class="texte">{{ vehicule.notes }}</dd></div>{% endif %}
+        </dl>
+      </div>
+    </section>
+
+    <section class="panneau" id="documents" aria-labelledby="titre-docs">
+      <div class="panneau-tete"><h2 id="titre-docs">Photos et documents</h2></div>
+      <div class="panneau-corps">
+        {% if photos %}
+        <div class="photos">
+          {% for d in photos %}<figure style="margin:0"><a href="{% url 'document_voir' d.pk %}" target="_blank" rel="noopener"><img src="{% url 'document_voir' d.pk %}" alt="{{ d.get_type_document_display }}" loading="lazy"><figcaption>{{ d.get_type_document_display }}{% if d.ordre %}, {{ d.ordre.numero }}{% endif %}</figcaption></a></figure>{% endfor %}
+        </div>
+        {% endif %}
+        {% if fichiers %}
+        <ul class="fichiers-liste"{% if photos %} style="margin-top:12px"{% endif %}>
+          {% for d in fichiers %}<li>{% icone 'fichier' %}<a href="{% url 'document_voir' d.pk %}" target="_blank" rel="noopener">{{ d }}</a><span class="discret petit">{{ d.get_type_document_display }}</span></li>{% endfor %}
+        </ul>
+        {% endif %}
+        {% if not photos and not fichiers %}<p class="discret">Aucun document. Ajoutez une copie de la carte grise pour éviter les erreurs de saisie.</p>{% endif %}
+      </div>
+      {% if user.gere_l_accueil %}
+      <div class="panneau-pied">
+        <form method="post" action="{% url 'vehicule_documents' vehicule.pk %}" enctype="multipart/form-data" class="barre-formulaire">
+          {% csrf_token %}
+          <label class="sr" for="{{ form_document.type_document.id_for_label }}">Type de document</label>
+          <select class="champ-seul" style="width:auto" name="{{ form_document.type_document.html_name }}" id="{{ form_document.type_document.id_for_label }}">
+            {% for valeur, libelle in form_document.fields.type_document.choices %}<option value="{{ valeur }}"{% if valeur == form_document.type_document.initial %} selected{% endif %}>{{ libelle }}</option>{% endfor %}
+          </select>
+          <div class="envoi">{{ form_document.fichiers }}<label class="bouton" for="{{ form_document.fichiers.id_for_label }}">{% icone 'photo' %}Choisir des fichiers</label><span class="fichiers-choisis" id="{{ form_document.fichiers.auto_id }}_liste" aria-live="polite">Aucun fichier choisi</span></div>
+          <button class="bouton" type="submit">{% icone 'envoyer_fichier' %}Ajouter</button>
+        </form>
+      </div>
+      {% endif %}
+    </section>
+  </div>
+
+  <aside class="fiche-cote">
+    <section class="panneau" aria-labelledby="titre-proprio">
+      <div class="panneau-tete"><h2 id="titre-proprio">Propriétaire</h2>{% if user.gere_l_accueil %}<a class="tous" href="{{ client.get_absolute_url }}">Fiche</a>{% endif %}</div>
+      <div class="panneau-corps">
+        <p style="margin-bottom:8px"><strong>{{ client.nom_affiche }}</strong></p>
+        {% if user.gere_l_accueil %}
+        <div class="contact">
+          <a href="tel:{{ client.telephone|tel }}">{% icone 'telephone' %}{{ client.telephone }}</a>
+          {% if client.email %}<a href="mailto:{{ client.email }}">{% icone 'courriel' %}{{ client.email }}</a>{% endif %}
+          <span class="discret petit">{{ client.adresse }}, {{ client.code_postal }} {{ client.ville }}</span>
+        </div>
+        {% endif %}
+      </div>
+    </section>
+
+    <section class="panneau" aria-labelledby="titre-echeances">
+      <div class="panneau-tete"><h2 id="titre-echeances">Échéances</h2>{% if user.gere_l_accueil %}<a class="tous" href="{% url 'echeance_nouveau' %}?vehicule={{ vehicule.pk }}">Ajouter</a>{% endif %}</div>
+      {% if echeances %}
+      <ul class="liste-vehicules">
+        {% for e in echeances %}
+        <li>
+          {% if user.gere_l_accueil %}<a href="{% url 'echeance_modifier' e.pk %}" style="grid-template-columns:minmax(0,1fr)">{% else %}<div style="padding:11px 18px">{% endif %}
+            <span class="ligne-1">{{ e.get_type_display }}</span>
+            <span class="ligne-2" style="grid-column:1"><span class="{% if e.en_retard %}alerte-texte{% endif %}">{% if e.prevue_le %}{{ e.prevue_le|date:"j F Y" }}, {{ e.prevue_le|echeance_relative }}{% endif %}{% if e.prevue_le and e.km_prevu %} ou {% endif %}{% if e.km_prevu %}{{ e.km_prevu|km }}{% endif %}</span>{% if e.statut == 'rappel_envoye' %}, rappel envoyé{% endif %}</span>
+          {% if user.gere_l_accueil %}</a>{% else %}</div>{% endif %}
+        </li>
+        {% endfor %}
+      </ul>
+      {% else %}<p class="vide">Aucune échéance prévue.{% if not vehicule.date_mise_circulation %} Renseignez la date de mise en circulation pour planifier le contrôle technique.{% endif %}</p>{% endif %}
+    </section>
+  </aside>
+</div>
+{% endblock %}

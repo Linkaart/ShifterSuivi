@@ -1,0 +1,48 @@
+{% extends "base.html" %}{% load garage_tags %}
+{% block titre %}Véhicules{% endblock %}
+{% block contenu %}
+<div class="entete">
+  <div class="entete-texte">
+    <h1>Véhicules</h1>
+    <p>Toutes les voitures déjà passées par le garage, avec leur prochain contrôle technique.</p>
+  </div>
+  {% if user.gere_l_accueil %}<div class="entete-actions"><a class="bouton" href="{% url 'vehicule_nouveau' %}">{% icone 'plus' %}Ajouter un véhicule</a></div>{% endif %}
+</div>
+
+<div class="filtres">
+  <form method="get">
+    <label class="sr" for="filtre-q">Rechercher</label>
+    <input class="champ-seul" id="filtre-q" type="search" name="q" value="{{ q }}" placeholder="Plaque, marque, VIN, client">
+    <button class="bouton" type="submit">Rechercher</button>
+  </form>
+  <nav class="onglets" aria-label="Filtrer">
+    <a href="?{% if q %}q={{ q|urlencode }}{% endif %}" aria-current="{% if atelier != '1' %}true{% else %}false{% endif %}">Tous</a>
+    <a href="?atelier=1{% if q %}&amp;q={{ q|urlencode }}{% endif %}" aria-current="{% if atelier == '1' %}true{% else %}false{% endif %}">À l'atelier</a>
+  </nav>
+</div>
+
+<div class="panneau">
+  {% if page.object_list %}
+  <div class="defile">
+    <table class="tableau">
+      <thead><tr><th>Plaque</th><th>Véhicule</th><th>Propriétaire</th><th class="num">Kilométrage</th><th>Prochain CT</th><th>Atelier</th></tr></thead>
+      <tbody>
+        {% for v in page %}
+        <tr>
+          <td><a href="{{ v.get_absolute_url }}">{% plaque v.immatriculation %}</a></td>
+          <td class="cellule-double"><a class="principal-lien" href="{{ v.get_absolute_url }}">{{ v.designation }}</a><small>{{ v.get_energie_display }}{% if v.annee %}, {{ v.annee }}{% endif %}</small></td>
+          <td>{% if user.gere_l_accueil %}<a href="{{ v.client.get_absolute_url }}">{{ v.client.nom_affiche }}</a>{% else %}{{ v.client.nom_affiche }}{% endif %}</td>
+          <td class="num">{{ v.kilometrage|km }}</td>
+          <td class="nowrap">{% with ct=v.prochain_ct %}{% if ct %}<span{% if v.ct_depasse %} class="alerte-texte" title="Contrôle technique dépassé"{% endif %}>{{ ct|date:"M Y" }}</span>{% else %}<span class="tres-discret">—</span>{% endif %}{% endwith %}</td>
+          <td>{% if v.statut_atelier %}<a href="{% url 'ordre_detail' v.ordre_atelier %}">{% statut v.statut_atelier %}</a>{% endif %}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% include "garage/_pagination.html" %}
+  {% else %}
+  <div class="vide"><p>Aucun véhicule trouvé.</p>{% if user.gere_l_accueil %}<a class="bouton" href="{% url 'reception' %}">Faire une réception</a>{% endif %}</div>
+  {% endif %}
+</div>
+{% endblock %}

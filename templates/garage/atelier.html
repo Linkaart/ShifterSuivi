@@ -1,0 +1,58 @@
+{% extends "base.html" %}{% load garage_tags %}
+{% block titre %}Atelier{% endblock %}
+{% block contenu %}
+<div class="entete">
+  <div class="entete-texte">
+    <h1>Atelier</h1>
+    <p>{{ nb_cartes }} véhicule{{ nb_cartes|pluralize }} en cours. Les urgences et les retards passent en premier.</p>
+  </div>
+  <nav class="onglets" aria-label="Filtrer par mécanicien">
+    <a href="{% url 'atelier' %}" aria-current="{% if not filtre %}true{% else %}false{% endif %}">Tous</a>
+    {% if user.est_mecanicien %}<a href="?mecanicien=moi" aria-current="{% if filtre == 'moi' %}true{% else %}false{% endif %}">Mes véhicules</a>{% endif %}
+    <a href="?mecanicien=libre" aria-current="{% if filtre == 'libre' %}true{% else %}false{% endif %}">Non attribués</a>
+    {% if not user.est_mecanicien %}{% for m in mecaniciens %}<a href="?mecanicien={{ m.pk }}" aria-current="{% if filtre == m.pk|stringformat:'s' %}true{% else %}false{% endif %}">{{ m.first_name|default:m.username }}</a>{% endfor %}{% endif %}
+  </nav>
+</div>
+
+<div class="atelier">
+  {% for colonne in colonnes %}
+  <section class="colonne" aria-labelledby="colonne-{{ forloop.counter }}">
+    <header class="colonne-tete">
+      <h2 id="colonne-{{ forloop.counter }}">{{ colonne.titre }} <span>{{ colonne.cartes|length }}</span></h2>
+      <ul>{% for valeur, libelle in colonne.statuts %}<li class="statut-{{ valeur }}">{{ libelle }}</li>{% endfor %}</ul>
+    </header>
+    <div class="colonne-cartes">
+      {% for o in colonne.cartes %}
+      <article class="carte statut-{{ o.statut }}">
+        <a class="carte-lien" href="{{ o.get_absolute_url }}"><span class="sr">Ouvrir {{ o.numero }}, {{ o.vehicule.immatriculation }}</span></a>
+        <div class="carte-haut">{% plaque o.vehicule.immatriculation %}{% statut o.statut %}</div>
+        <p class="carte-modele">{{ o.vehicule.designation }}</p>
+        <p class="carte-client">{{ o.client.nom_affiche }}</p>
+        <p class="carte-demande">{{ o.travaux_prevus|default:o.demande_client }}</p>
+        <div class="carte-bas">
+          {% if o.mecanicien %}<span class="avatar avatar-petit" title="{{ o.mecanicien }}">{{ o.mecanicien.initiales }}</span>{% else %}<span class="tres-discret">Non attribué</span>{% endif %}
+          <span class="temps" title="Dans cette étape depuis">{% icone 'horloge' %}{{ o.statut_depuis|duree }}</span>
+          {% if o.urgence == 'urgente' %}<span class="drapeau drapeau-signal">Urgent</span>{% endif %}
+          {% if o.en_retard %}<span class="drapeau">{% icone 'alerte' %}Retard</span>{% elif o.fin_prevue_le %}<span>Fin {{ o.fin_prevue_le|echeance_relative }}</span>{% endif %}
+        </div>
+        {% if o.action %}
+        <form class="carte-action" method="post" action="{% url 'ordre_statut' o.pk %}">
+          {% csrf_token %}
+          <input type="hidden" name="statut" value="{{ o.action.0 }}">
+          <input type="hidden" name="suivant" value="{{ request.get_full_path }}">
+          <button class="bouton bouton-petit" type="submit">{{ o.action.1 }}</button>
+        </form>
+        {% elif o.statut == 'pret' and user.gere_l_accueil %}
+        <div class="carte-action"><a class="bouton bouton-petit" href="{{ o.get_absolute_url }}#restitution">Rendre le véhicule</a></div>
+        {% elif o.statut == 'devis_envoye' and user.gere_l_accueil %}
+        <div class="carte-action"><a class="bouton bouton-petit" href="{{ o.get_absolute_url }}#accord">Enregistrer l'accord</a></div>
+        {% endif %}
+      </article>
+      {% empty %}
+      <p class="colonne-vide">Aucun véhicule.</p>
+      {% endfor %}
+    </div>
+  </section>
+  {% endfor %}
+</div>
+{% endblock %}

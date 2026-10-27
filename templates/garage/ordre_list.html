@@ -1,0 +1,56 @@
+{% extends "base.html" %}{% load garage_tags %}
+{% block titre %}Ordres de réparation{% endblock %}
+{% block contenu %}
+<div class="entete">
+  <div class="entete-texte">
+    <h1>Ordres de réparation</h1>
+    <p>Un ordre par passage à l'atelier, du dépôt des clés à la restitution.</p>
+  </div>
+  {% if user.gere_l_accueil %}<div class="entete-actions"><a class="bouton bouton-principal" href="{% url 'reception' %}">{% icone 'plus' %}Nouvelle réception</a></div>{% endif %}
+</div>
+
+<div class="filtres">
+  <form method="get">
+    <label class="sr" for="filtre-q">Rechercher</label>
+    <input class="champ-seul" id="filtre-q" type="search" name="q" value="{{ q }}" placeholder="Plaque, n° d'OR, client">
+    <label class="sr" for="filtre-statut">Statut</label>
+    <select class="champ-seul" id="filtre-statut" name="statut" data-auto>
+      <option value="actifs"{% if statut == 'actifs' %} selected{% endif %}>À l'atelier</option>
+      <option value="tous"{% if statut == 'tous' %} selected{% endif %}>Tous les statuts</option>
+      {% for valeur, libelle in statuts %}<option value="{{ valeur }}"{% if statut == valeur %} selected{% endif %}>{{ libelle }}</option>{% endfor %}
+    </select>
+    <label class="sr" for="filtre-meca">Mécanicien</label>
+    <select class="champ-seul" id="filtre-meca" name="mecanicien" data-auto>
+      <option value="">Tous les mécaniciens</option>
+      {% for m in mecaniciens %}<option value="{{ m.pk }}"{% if mecanicien == m.pk|stringformat:'s' %} selected{% endif %}>{{ m }}</option>{% endfor %}
+    </select>
+    <button class="bouton" type="submit">Filtrer</button>
+  </form>
+</div>
+
+<div class="panneau">
+  {% if page.object_list %}
+  <div class="defile">
+    <table class="tableau">
+      <thead><tr><th>Véhicule</th><th>N° d'OR</th><th>Client</th><th>Statut</th><th class="masque-mobile">Mécanicien</th><th>Arrivé</th><th>Fin prévue</th></tr></thead>
+      <tbody>
+        {% for o in page %}
+        <tr>
+          <td><a href="{{ o.get_absolute_url }}">{% plaque o.vehicule.immatriculation %}</a></td>
+          <td class="cellule-double"><a class="principal-lien" href="{{ o.get_absolute_url }}">{{ o.numero }}</a><small>{{ o.vehicule.designation }}</small></td>
+          <td>{{ o.client.nom_affiche }}</td>
+          <td>{% statut o.statut %}{% if o.en_retard %} <span class="drapeau">Retard</span>{% endif %}</td>
+          <td class="masque-mobile">{{ o.mecanicien|default:"—" }}</td>
+          <td class="nowrap">{{ o.arrive_le|date:"j M Y" }}</td>
+          <td class="nowrap{% if o.en_retard %} alerte-texte{% endif %}">{{ o.fin_prevue_le|date:"j M"|default:"—" }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% include "garage/_pagination.html" %}
+  {% else %}
+  <div class="vide"><p>Aucun ordre de réparation ne correspond à ces filtres.</p><a class="bouton" href="{% url 'ordre_list' %}">Effacer les filtres</a></div>
+  {% endif %}
+</div>
+{% endblock %}

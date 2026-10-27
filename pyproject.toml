@@ -1,0 +1,19 @@
+[project]
+name = "shiftersuivi"
+version = "1.0.0"
+description = "Suivi des véhicules d'un garage, de la réception à la remise des clés"
+requires-python = ">=3.12"
+dependencies = [
+    "Django>=5.2,<6.0",
+    "whitenoise>=6.7",
+    "gunicorn>=23.0",
+    "psycopg[binary]>=3.2",
+    "vercel>=0.12",
+]
+
+[tool.vercel]
+entrypoint = "config.wsgi:application"
+
+[tool.vercel.scripts]
+# Migrations à chaque déploiement, démo chargée une seule fois si SEED_DEMO=1
+build = "python manage.py preparer_deploiement"

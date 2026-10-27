@@ -1,0 +1,49 @@
+{% extends "base.html" %}{% load garage_tags %}
+{% block titre %}Clients{% endblock %}
+{% block contenu %}
+<div class="entete">
+  <div class="entete-texte">
+    <h1>Clients</h1>
+    <p>Particuliers et professionnels, avec leurs véhicules et leur dernier passage.</p>
+  </div>
+  <div class="entete-actions"><a class="bouton" href="{% url 'client_nouveau' %}">{% icone 'plus' %}Nouveau client</a></div>
+</div>
+
+<div class="filtres">
+  <form method="get">
+    <label class="sr" for="filtre-q">Rechercher</label>
+    <input class="champ-seul" id="filtre-q" type="search" name="q" value="{{ q }}" placeholder="Nom, téléphone, ville">
+    {% if type %}<input type="hidden" name="type" value="{{ type }}">{% endif %}
+    <button class="bouton" type="submit">Rechercher</button>
+  </form>
+  <nav class="onglets" aria-label="Type de client">
+    <a href="?{% if q %}q={{ q|urlencode }}{% endif %}" aria-current="{% if not type %}true{% else %}false{% endif %}">Tous</a>
+    {% for valeur, libelle in types %}<a href="?type={{ valeur }}{% if q %}&amp;q={{ q|urlencode }}{% endif %}" aria-current="{% if type == valeur %}true{% else %}false{% endif %}">{{ libelle }}s</a>{% endfor %}
+  </nav>
+</div>
+
+<div class="panneau">
+  {% if page.object_list %}
+  <div class="defile">
+    <table class="tableau">
+      <thead><tr><th>Client</th><th>Téléphone</th><th class="masque-mobile">Ville</th><th class="num">Véhicules</th><th>Dernier passage</th><th>Rappels</th></tr></thead>
+      <tbody>
+        {% for c in page %}
+        <tr>
+          <td class="cellule-double"><a class="principal-lien" href="{{ c.get_absolute_url }}">{{ c.nom_affiche }}</a>{% if c.type_client == 'professionnel' %}<small>Professionnel</small>{% endif %}</td>
+          <td class="nowrap"><a href="tel:{{ c.telephone|tel }}" style="text-decoration:none">{{ c.telephone }}</a></td>
+          <td class="masque-mobile">{{ c.ville }}</td>
+          <td class="num">{{ c.nb_vehicules }}</td>
+          <td class="nowrap">{{ c.dernier_passage|date:"j M Y"|default:"—" }}</td>
+          <td>{% if c.accord_rappels %}<span class="drapeau drapeau-ok">Accepte</span>{% else %}<span class="tres-discret">Non</span>{% endif %}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% include "garage/_pagination.html" %}
+  {% else %}
+  <div class="vide"><p>Aucun client trouvé.</p><a class="bouton" href="{% url 'client_nouveau' %}">Créer un client</a></div>
+  {% endif %}
+</div>
+{% endblock %}

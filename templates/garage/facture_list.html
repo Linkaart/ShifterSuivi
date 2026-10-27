@@ -1,0 +1,51 @@
+{% extends "base.html" %}{% load garage_tags %}
+{% block titre %}Factures{% endblock %}
+{% block contenu %}
+<div class="entete">
+  <div class="entete-texte">
+    <h1>Factures</h1>
+    <p>Numérotation continue : une facture émise ne se supprime pas.</p>
+  </div>
+</div>
+
+<div class="filtres">
+  <nav class="onglets" aria-label="Paiement">
+    <a href="?{% if q %}q={{ q|urlencode }}{% endif %}" aria-current="{% if not paiement %}true{% else %}false{% endif %}">Toutes</a>
+    <a href="?paiement=a_regler{% if q %}&amp;q={{ q|urlencode }}{% endif %}" aria-current="{% if paiement == 'a_regler' %}true{% else %}false{% endif %}">À encaisser</a>
+    <a href="?paiement=payee{% if q %}&amp;q={{ q|urlencode }}{% endif %}" aria-current="{% if paiement == 'payee' %}true{% else %}false{% endif %}">Payées</a>
+  </nav>
+  <form method="get">
+    {% if paiement %}<input type="hidden" name="paiement" value="{{ paiement }}">{% endif %}
+    <label class="sr" for="filtre-q">Rechercher</label>
+    <input class="champ-seul" id="filtre-q" type="search" name="q" value="{{ q }}" placeholder="N°, client ou plaque">
+    <button class="bouton" type="submit">Rechercher</button>
+  </form>
+</div>
+
+<div class="panneau">
+  {% if page.object_list %}
+  <div class="defile">
+    <table class="tableau">
+      <thead><tr><th>Numéro</th><th>Date</th><th>Client</th><th>Véhicule</th><th class="num">Total TTC</th><th class="num">Reste dû</th><th>Paiement</th></tr></thead>
+      <tbody>
+        {% for f in page %}
+        <tr>
+          <td><a class="principal-lien" href="{{ f.get_absolute_url }}">{{ f.numero }}</a></td>
+          <td class="nowrap">{{ f.emise_le|date:"j M Y" }}</td>
+          <td>{{ f.client_nom }}</td>
+          <td>{% plaque f.ordre.vehicule.immatriculation %}</td>
+          <td class="num">{{ f.total_ttc|euros }}</td>
+          <td class="num{% if f.reste_a_payer %} alerte-texte{% endif %}">{% if f.reste_a_payer %}{{ f.reste_a_payer|euros }}{% else %}<span class="tres-discret">—</span>{% endif %}</td>
+          <td><span class="drapeau {% if f.statut_paiement == 'payee' %}drapeau-ok{% elif f.statut_paiement == 'partielle' %}drapeau-signal{% endif %}">{{ f.get_statut_paiement_display }}</span></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+      <tfoot><tr><td colspan="4">Total de la sélection</td><td class="num">{{ total_ttc|euros }}</td><td class="num">{{ total_reste|euros }}</td><td></td></tr></tfoot>
+    </table>
+  </div>
+  {% include "garage/_pagination.html" %}
+  {% else %}
+  <div class="vide"><p>Aucune facture ici. Les factures se créent depuis un ordre de réparation terminé.</p></div>
+  {% endif %}
+</div>
+{% endblock %}

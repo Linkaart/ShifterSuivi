@@ -1,0 +1,121 @@
+{% extends "base.html" %}{% load garage_tags %}
+{% block titre %}Tableau de bord{% endblock %}
+{% block contenu %}
+<div class="accueil-titre">
+  <h1>{{ aujourd_hui|date:"l j F"|capfirst }}</h1>
+  <p>
+    {% if total_actifs %}{{ total_actifs }} véhicule{{ total_actifs|pluralize }} à l'atelier{% if arrives_aujourd_hui %}, dont {{ arrives_aujourd_hui }} arrivé{{ arrives_aujourd_hui|pluralize }} aujourd'hui{% endif %}.
+    {% else %}Aucun véhicule à l'atelier pour le moment.{% endif %}
+  </p>
+</div>
+
+<section class="panneau charge" aria-labelledby="titre-charge">
+  <h2 id="titre-charge">Où en sont les véhicules</h2>
+  <div class="charge-barre" role="img" aria-label="Répartition des {{ total_actifs }} véhicules par étape">
+    {% for c in charge %}{% if c.nombre %}<span class="statut-{{ c.statut }}" style="flex: {{ c.nombre }}" title="{{ c.libelle }} : {{ c.nombre }}"></span>{% endif %}{% endfor %}
+    {% if not total_actifs %}<span class="charge-vide"></span>{% endif %}
+  </div>
+  <ul class="legende">
+    {% for c in charge %}
+    <li><a href="{% url 'ordre_list' %}?statut={{ c.statut }}"{% if not c.nombre %} class="zero"{% endif %}><i class="statut-{{ c.statut }}"></i>{{ c.libelle }} <b>{{ c.nombre }}</b></a></li>
+    {% endfor %}
+  </ul>
+</section>
+
+<div class="trois">
+  <section class="panneau{% if nb_en_retard %} panneau-alerte{% endif %}" aria-labelledby="titre-retard">
+    <div class="panneau-tete">
+      <h2 id="titre-retard">En retard <span class="compte">{{ nb_en_retard }}</span></h2>
+    </div>
+    {% if en_retard %}
+    <ul class="liste-vehicules">
+      {% for o in en_retard %}
+      <li><a href="{{ o.get_absolute_url }}">{% plaque o.vehicule.immatriculation %}<span class="ligne-1">{{ o.vehicule.designation }}</span><span class="ligne-2">Prévu {{ o.fin_prevue_le|echeance_relative }}, {{ o.get_statut_display|lower }}</span></a></li>
+      {% endfor %}
+    </ul>
+    {% else %}<p class="vide">Aucun retard : tout est dans les temps.</p>{% endif %}
+  </section>
+
+  <section class="panneau{% if nb_prets %} panneau-signal{% endif %}" aria-labelledby="titre-prets">
+    <div class="panneau-tete">
+      <h2 id="titre-prets">Prêts à rendre <span class="compte">{{ nb_prets }}</span></h2>
+    </div>
+    {% if prets %}
+    <ul class="liste-vehicules">
+      {% for o in prets %}
+      <li><a href="{{ o.get_absolute_url }}">{% plaque o.vehicule.immatriculation %}<span class="ligne-1">{{ o.client.nom_affiche }}</span><span class="ligne-2">{{ o.vehicule.designation }}, prêt depuis {{ o.statut_depuis|duree }}</span></a></li>
+      {% endfor %}
+    </ul>
+    {% else %}<p class="vide">Aucun véhicule n'attend son propriétaire.</p>{% endif %}
+  </section>
+
+  <section class="panneau" aria-labelledby="titre-attente">
+    <div class="panneau-tete">
+      <h2 id="titre-attente">En attente <span class="compte">{{ nb_en_attente }}</span></h2>
+    </div>
+    {% if en_attente %}
+    <ul class="liste-vehicules">
+      {% for o in en_attente %}
+      <li><a href="{{ o.get_absolute_url }}">{% plaque o.vehicule.immatriculation %}<span class="ligne-1">{{ o.get_statut_display }}</span><span class="ligne-2">{{ o.vehicule.designation }}, depuis {{ o.statut_depuis|duree }}</span></a></li>
+      {% endfor %}
+    </ul>
+    {% else %}<p class="vide">Aucun devis ni aucune pièce en attente.</p>{% endif %}
+  </section>
+</div>
+
+{% if mes_ordres is not None %}
+<section class="panneau" style="margin-top:16px" aria-labelledby="titre-mes">
+  <div class="panneau-tete"><h2 id="titre-mes">Mes véhicules <span class="compte">{{ mes_ordres|length }}</span></h2><a class="tous" href="{% url 'atelier' %}?mecanicien=moi">Voir sur l'atelier</a></div>
+  {% if mes_ordres %}
+  <ul class="liste-vehicules">
+    {% for o in mes_ordres %}
+    <li><a href="{{ o.get_absolute_url }}">{% plaque o.vehicule.immatriculation %}<span class="ligne-1">{{ o.vehicule.designation }}</span><span class="ligne-2">{{ o.get_statut_display }}{% if o.fin_prevue_le %}, fin prévue {{ o.fin_prevue_le|echeance_relative }}{% endif %}</span></a></li>
+    {% endfor %}
+  </ul>
+  {% else %}<p class="vide">Aucun véhicule ne vous est attribué. Les véhicules non attribués sont sur l'atelier.</p>{% endif %}
+</section>
+{% endif %}
+
+{% if user.gere_l_accueil %}
+<div class="deux">
+  <section class="panneau" aria-labelledby="titre-echeances">
+    <div class="panneau-tete">
+      <h2 id="titre-echeances">Échéances des 30 prochains jours</h2>
+      <a class="tous" href="{% url 'echeance_list' %}">Toutes les échéances</a>
+    </div>
+    {% if echeances %}
+    <div class="defile">
+      <table class="tableau">
+        <thead><tr><th>Véhicule</th><th>Échéance</th><th>Quand</th><th>Client</th></tr></thead>
+        <tbody>
+          {% for e in echeances %}
+          <tr>
+            <td><a href="{{ e.vehicule.get_absolute_url }}">{% plaque e.vehicule.immatriculation %}</a></td>
+            <td>{{ e.get_type_display }}{% if e.statut == 'rappel_envoye' %} <span class="drapeau drapeau-calme">Rappel envoyé</span>{% endif %}</td>
+            <td class="nowrap{% if e.en_retard %} alerte-texte{% endif %}">{{ e.prevue_le|echeance_relative }}</td>
+            <td class="cellule-double"><span>{{ e.vehicule.client.nom_affiche }}</span>{% if not e.vehicule.client.accord_rappels %}<small>Pas d'accord pour les rappels</small>{% endif %}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}<p class="vide">Rien de prévu dans les 30 prochains jours.</p>{% endif %}
+  </section>
+
+  {% if mois %}
+  <section class="panneau" aria-labelledby="titre-mois">
+    <div class="panneau-tete">
+      <h2 id="titre-mois">{{ aujourd_hui|date:"F Y"|capfirst }}</h2>
+      <a class="tous" href="{% url 'facture_list' %}">Factures</a>
+    </div>
+    <dl class="chiffres">
+      <div><dt>Facturé HT</dt><dd>{{ mois.facture_ht|euros }}</dd></div>
+      <div><dt>Encaissé</dt><dd>{{ mois.encaisse|euros }}</dd></div>
+      <div><dt>Véhicules rendus</dt><dd>{{ mois.rendus }} <small>{{ mois.nb_factures }} facture{{ mois.nb_factures|pluralize }} émise{{ mois.nb_factures|pluralize }}</small></dd></div>
+      <div><dt>Reste à encaisser</dt><dd{% if mois.impayes %} class="alerte-texte"{% endif %}>{{ mois.impayes|euros }} <small>{{ mois.nb_impayees }} facture{{ mois.nb_impayees|pluralize }}</small></dd></div>
+    </dl>
+  </section>
+  {% endif %}
+</div>
+{% endif %}
+{% endblock %}

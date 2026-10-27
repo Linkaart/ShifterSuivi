@@ -1,0 +1,92 @@
+{% extends "base.html" %}{% load garage_tags %}
+{% block titre %}{{ client.nom_affiche }}{% endblock %}
+{% block contenu %}
+<a class="fil" href="{% url 'client_list' %}">{% icone 'retour' %}Clients</a>
+<div class="entete">
+  <div class="entete-texte">
+    <h1>{{ client.nom_affiche }}</h1>
+    <p>{{ client.get_type_client_display }}, client depuis {{ client.cree_le|date:"F Y" }}</p>
+  </div>
+  <div class="entete-actions">
+    <a class="bouton" href="{% url 'client_modifier' client.pk %}">{% icone 'modifier' %}Modifier</a>
+    <a class="bouton" href="{% url 'vehicule_nouveau' %}?client={{ client.pk }}">{% icone 'plus' %}Ajouter un véhicule</a>
+  </div>
+</div>
+
+<div class="fiche">
+  <div class="fiche-principale">
+    <section class="panneau" aria-labelledby="titre-vehicules">
+      <div class="panneau-tete"><h2 id="titre-vehicules">Véhicules <span class="compte">{{ vehicules|length }}</span></h2></div>
+      {% if vehicules %}
+      <ul class="liste-vehicules">
+        {% for v in vehicules %}
+        <li><a href="{{ v.get_absolute_url }}">{% plaque v.immatriculation %}<span class="ligne-1">{{ v.designation }}</span><span class="ligne-2">{{ v.get_energie_display }}{% if v.annee %}, {{ v.annee }}{% endif %}, {{ v.kilometrage|km }}{% if v.prochain_ct %}, CT {{ v.prochain_ct|date:"M Y" }}{% endif %}</span></a></li>
+        {% endfor %}
+      </ul>
+      {% else %}<p class="vide">Aucun véhicule enregistré.</p>{% endif %}
+    </section>
+
+    <section class="panneau" aria-labelledby="titre-passages">
+      <div class="panneau-tete"><h2 id="titre-passages">Passages à l'atelier</h2></div>
+      {% if ordres %}
+      <div class="defile">
+        <table class="tableau">
+          <thead><tr><th>N° d'OR</th><th>Véhicule</th><th>Arrivé</th><th>Statut</th></tr></thead>
+          <tbody>
+            {% for o in ordres %}
+            <tr>
+              <td><a class="principal-lien" href="{{ o.get_absolute_url }}">{{ o.numero }}</a></td>
+              <td>{% plaque o.vehicule.immatriculation %}</td>
+              <td class="nowrap">{{ o.arrive_le|date:"j M Y" }}</td>
+              <td>{% statut o.statut %}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}<p class="vide">Aucun passage pour l'instant.</p>{% endif %}
+    </section>
+
+    {% if factures %}
+    <section class="panneau" aria-labelledby="titre-factures">
+      <div class="panneau-tete"><h2 id="titre-factures">Factures</h2></div>
+      <div class="defile">
+        <table class="tableau">
+          <thead><tr><th>Numéro</th><th>Date</th><th class="num">Total TTC</th><th>Paiement</th></tr></thead>
+          <tbody>
+            {% for f in factures %}
+            <tr>
+              <td><a class="principal-lien" href="{{ f.get_absolute_url }}">{{ f.numero }}</a></td>
+              <td>{{ f.emise_le|date:"j M Y" }}</td>
+              <td class="num">{{ f.total_ttc|euros }}</td>
+              <td><span class="drapeau {% if f.statut_paiement == 'payee' %}drapeau-ok{% elif f.statut_paiement == 'partielle' %}drapeau-signal{% endif %}">{{ f.get_statut_paiement_display }}</span></td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </section>
+    {% endif %}
+  </div>
+
+  <aside class="fiche-cote">
+    <section class="panneau" aria-labelledby="titre-coordonnees">
+      <div class="panneau-tete"><h2 id="titre-coordonnees">Coordonnées</h2></div>
+      <div class="panneau-corps">
+        <div class="contact">
+          <a href="tel:{{ client.telephone|tel }}">{% icone 'telephone' %}{{ client.telephone }}</a>
+          {% if client.email %}<a href="mailto:{{ client.email }}">{% icone 'courriel' %}{{ client.email }}</a>{% endif %}
+        </div>
+        <dl class="infos infos-une" style="margin-top:16px">
+          <div><dt>Adresse</dt><dd class="texte">{{ client.adresse_complete }}</dd></div>
+          <div><dt>Préfère être contacté par</dt><dd>{{ client.get_contact_prefere_display }}</dd></div>
+          <div><dt>Rappels d'entretien</dt><dd>{% if client.accord_rappels %}Accord donné le {{ client.accord_rappels_le|date:"j F Y" }}{% else %}Pas d'accord : ne pas envoyer de rappels{% endif %}</dd></div>
+          {% if client.raison_sociale %}<div><dt>Contact</dt><dd>{{ client.nom|upper }} {{ client.prenom }}</dd></div>{% endif %}
+          {% if client.siret %}<div><dt>SIRET</dt><dd class="chiffre">{{ client.siret }}</dd></div>{% endif %}
+          {% if client.notes %}<div><dt>Notes internes</dt><dd class="texte">{{ client.notes }}</dd></div>{% endif %}
+        </dl>
+      </div>
+    </section>
+  </aside>
+</div>
+{% endblock %}

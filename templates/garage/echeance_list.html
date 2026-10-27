@@ -1,0 +1,80 @@
+{% extends "base.html" %}{% load garage_tags %}
+{% block titre %}Échéances{% endblock %}
+{% block contenu %}
+<div class="entete">
+  <div class="entete-texte">
+    <h1>Échéances</h1>
+    <p>Contrôles techniques et entretiens à venir. Ne relancez que les clients qui ont donné leur accord.</p>
+  </div>
+  <div class="entete-actions"><a class="bouton" href="{% url 'echeance_nouveau' %}">{% icone 'plus' %}Nouvelle échéance</a></div>
+</div>
+
+<div class="filtres">
+  <nav class="onglets" aria-label="Période">
+    {% for valeur, libelle in filtres %}<a href="?filtre={{ valeur }}{% if type %}&amp;type={{ type }}{% endif %}" aria-current="{% if filtre == valeur %}true{% else %}false{% endif %}">{{ libelle }}</a>{% endfor %}
+  </nav>
+  <form method="get">
+    <input type="hidden" name="filtre" value="{{ filtre }}">
+    <label class="sr" for="filtre-type">Type</label>
+    <select class="champ-seul" id="filtre-type" name="type" data-auto>
+      <option value="">Tous les types</option>
+      {% for valeur, libelle in types %}<option value="{{ valeur }}"{% if type == valeur %} selected{% endif %}>{{ libelle }}</option>{% endfor %}
+    </select>
+    <noscript><button class="bouton" type="submit">Filtrer</button></noscript>
+  </form>
+</div>
+
+<div class="panneau">
+  {% if page.object_list %}
+  <div class="defile">
+    <table class="tableau">
+      <thead><tr><th>Véhicule</th><th>Échéance</th><th>Quand</th><th>Client</th><th>Suivi</th><th><span class="sr">Actions</span></th></tr></thead>
+      <tbody>
+        {% for e in page %}
+        <tr>
+          <td><a href="{{ e.vehicule.get_absolute_url }}">{% plaque e.vehicule.immatriculation %}</a></td>
+          <td class="cellule-double"><a class="principal-lien" href="{% url 'echeance_modifier' e.pk %}">{{ e.get_type_display }}</a><small>{{ e.vehicule.designation }}</small></td>
+          <td class="cellule-double nowrap">
+            {% if e.prevue_le %}<span{% if e.en_retard %} class="alerte-texte"{% endif %}>{{ e.prevue_le|date:"j M Y" }}</span><small>{{ e.prevue_le|echeance_relative }}</small>{% endif %}
+            {% if e.km_prevu %}<small>ou {{ e.km_prevu|km }}</small>{% endif %}
+          </td>
+          <td class="cellule-double">
+            <a href="{{ e.vehicule.client.get_absolute_url }}" style="text-decoration:none">{{ e.vehicule.client.nom_affiche }}</a>
+            <small>{% if e.vehicule.client.accord_rappels %}<a href="tel:{{ e.vehicule.client.telephone|tel }}" style="text-decoration:none">{{ e.vehicule.client.telephone }}</a>, préfère {{ e.vehicule.client.get_contact_prefere_display|lower }}{% else %}Pas d'accord pour les rappels{% endif %}</small>
+          </td>
+          <td>
+            {% if e.statut == 'faite' %}<span class="drapeau drapeau-ok">Faite le {{ e.faite_le|date:"j M" }}</span>
+            {% elif e.statut == 'rappel_envoye' %}<span class="drapeau drapeau-calme">Rappel {{ e.get_rappel_canal_display }} le {{ e.rappel_le|date:"j M" }}</span>
+            {% else %}<span class="tres-discret">À venir</span>{% endif %}
+          </td>
+          <td>
+            {% if e.statut != 'faite' %}
+            <div class="barre-formulaire" style="flex-wrap:nowrap">
+              {% if e.vehicule.client.accord_rappels %}
+              <form method="post" action="{% url 'echeance_rappel' e.pk %}" class="barre-formulaire" style="flex-wrap:nowrap;gap:6px">
+                {% csrf_token %}<input type="hidden" name="suivant" value="{{ request.get_full_path }}">
+                <label class="sr" for="canal-{{ e.pk }}">Canal</label>
+                <select class="champ-seul" id="canal-{{ e.pk }}" name="canal" style="min-width:0;width:auto;min-height:32px;padding:4px 8px;appearance:auto">
+                  {% for valeur, libelle in canaux %}<option value="{{ valeur }}"{% if valeur == e.vehicule.client.contact_prefere %} selected{% endif %}>{{ libelle }}</option>{% endfor %}
+                </select>
+                <button class="bouton bouton-petit" type="submit">{% icone 'envoi' %}Rappel envoyé</button>
+              </form>
+              {% endif %}
+              <form method="post" action="{% url 'echeance_faite' e.pk %}">
+                {% csrf_token %}<input type="hidden" name="suivant" value="{{ request.get_full_path }}">
+                <button class="bouton bouton-petit bouton-discret" type="submit">{% icone 'valide' %}Faite</button>
+              </form>
+            </div>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% include "garage/_pagination.html" %}
+  {% else %}
+  <div class="vide"><p>{% if filtre == 'retard' %}Aucune échéance en retard.{% elif filtre == 'faites' %}Aucune échéance faite pour l'instant.{% else %}Rien de prévu sur cette période.{% endif %}</p></div>
+  {% endif %}
+</div>
+{% endblock %}

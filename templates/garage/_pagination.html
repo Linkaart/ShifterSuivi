@@ -1,0 +1,9 @@
+{% if page.paginator.num_pages > 1 %}
+<nav class="pagination" aria-label="Pages">
+  <span>{{ page.start_index }} à {{ page.end_index }} sur {{ page.paginator.count }}</span>
+  <div>
+    {% if page.has_previous %}<a class="bouton bouton-petit" href="{% querystring page=page.previous_page_number %}">Précédents</a>{% endif %}
+    {% if page.has_next %}<a class="bouton bouton-petit" href="{% querystring page=page.next_page_number %}">Suivants</a>{% endif %}
+  </div>
+</nav>
+{% endif %}

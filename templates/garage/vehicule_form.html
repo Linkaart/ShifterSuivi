@@ -1,0 +1,52 @@
+{% extends "base.html" %}{% load garage_tags %}
+{% block titre %}{% if vehicule %}Modifier {{ vehicule.immatriculation }}{% else %}Nouveau véhicule{% endif %}{% endblock %}
+{% block contenu %}
+<a class="fil" href="{% if vehicule %}{{ vehicule.get_absolute_url }}{% else %}{% url 'vehicule_list' %}{% endif %}">{% icone 'retour' %}{% if vehicule %}{{ vehicule.immatriculation }}{% else %}Véhicules{% endif %}</a>
+<div class="entete">
+  <div class="entete-texte">
+    <h1>{% if vehicule %}Modifier le véhicule{% else %}Nouveau véhicule{% endif %}</h1>
+    <p>Recopiez la carte grise : les codes entre parenthèses indiquent la rubrique.</p>
+  </div>
+</div>
+<form method="post" class="formulaire">
+  {% csrf_token %}
+  {% if form.non_field_errors %}<div class="erreurs-formulaire">{{ form.non_field_errors|join:" " }}</div>{% endif %}
+  <fieldset class="groupe">
+    <legend>Propriétaire</legend>
+    <div class="grille">
+      {% include "garage/_champ.html" with champ=form.client classe="col-6" %}
+      <p class="col-6 discret petit" style="align-self:end;margin:0 0 10px">Client absent de la liste ? <a href="{% url 'client_nouveau' %}">Créer le client</a> d'abord.</p>
+    </div>
+  </fieldset>
+  <fieldset class="groupe">
+    <legend>Carte grise</legend>
+    <div class="grille">
+      {% include "garage/_champ.html" with champ=form.immatriculation classe="col-4 champ-plaque" %}
+      {% include "garage/_champ.html" with champ=form.marque classe="col-4" %}
+      {% include "garage/_champ.html" with champ=form.modele classe="col-4" %}
+      {% include "garage/_champ.html" with champ=form.version classe="col-6" %}
+      {% include "garage/_champ.html" with champ=form.date_mise_circulation classe="col-3" %}
+      {% include "garage/_champ.html" with champ=form.energie classe="col-3" %}
+      {% include "garage/_champ.html" with champ=form.vin classe="col-6" %}
+      {% include "garage/_champ.html" with champ=form.puissance_fiscale classe="col-3" %}
+      {% include "garage/_champ.html" with champ=form.cylindree classe="col-3" %}
+    </div>
+  </fieldset>
+  <fieldset class="groupe">
+    <legend>Atelier</legend>
+    <div class="grille">
+      {% include "garage/_champ.html" with champ=form.kilometrage classe="col-3" %}
+      {% include "garage/_champ.html" with champ=form.boite classe="col-3" %}
+      {% include "garage/_champ.html" with champ=form.couleur classe="col-3" %}
+      {% include "garage/_champ.html" with champ=form.date_dernier_ct classe="col-3" %}
+      {% include "garage/_champ.html" with champ=form.code_moteur classe="col-4" %}
+      {% include "garage/_champ.html" with champ=form.dimensions_pneus classe="col-4" %}
+      {% include "garage/_champ.html" with champ=form.notes classe="col-12" %}
+    </div>
+  </fieldset>
+  <div class="pied-formulaire">
+    <a class="bouton bouton-discret" href="{% if vehicule %}{{ vehicule.get_absolute_url }}{% else %}{% url 'vehicule_list' %}{% endif %}">Annuler</a>
+    <button class="bouton bouton-principal" type="submit">Enregistrer le véhicule</button>
+  </div>
+</form>
+{% endblock %}

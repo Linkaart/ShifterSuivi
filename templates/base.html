@@ -1,0 +1,74 @@
+{% load static garage_tags %}<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <title>{% block titre %}ShifterSuivi{% endblock %} – ShifterSuivi</title>
+  <link rel="icon" href="{% static 'img/favicon.svg' %}" type="image/svg+xml">
+  <link rel="preload" href="{% static 'fonts/barlow-latin-400-normal.woff2' %}" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="{% static 'fonts/barlow-condensed-latin-600-normal.woff2' %}" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="{% static 'css/app.css' %}">
+  <script src="{% static 'js/app.js' %}" defer></script>
+</head>
+<body>
+<a class="evitement" href="#contenu">Aller au contenu</a>
+{% if user.is_authenticated %}
+<div class="cadre">
+  <aside class="rail" id="rail" aria-label="Menu">
+    <a class="marque" href="{% url 'tableau_de_bord' %}">{% logo %}<span class="marque-nom">ShifterSuivi</span></a>
+    <p class="marque-garage">{{ garage.nom }}</p>
+    <nav class="nav" aria-label="Navigation principale">
+      <ul>
+        <li><a href="{% url 'tableau_de_bord' %}" {% actif 'tableau' %}>{% icone 'tableau' %}Tableau de bord</a></li>
+        <li><a href="{% url 'atelier' %}" {% actif 'atelier' %}>{% icone 'atelier' %}Atelier<span class="compteur">{{ nb_atelier }}</span></a></li>
+        <li><a href="{% url 'ordre_list' %}" {% actif 'ordre' 'reception' %}>{% icone 'ordre' %}Ordres de réparation</a></li>
+        <li><a href="{% url 'vehicule_list' %}" {% actif 'vehicule' %}>{% icone 'vehicule' %}Véhicules</a></li>
+        {% if user.gere_l_accueil %}
+        <li><a href="{% url 'client_list' %}" {% actif 'client' %}>{% icone 'client' %}Clients</a></li>
+        <li><a href="{% url 'echeance_list' %}" {% actif 'echeance' %}>{% icone 'echeance' %}Échéances</a></li>
+        <li><a href="{% url 'facture_list' %}" {% actif 'facture' %}>{% icone 'facture' %}Factures</a></li>
+        {% endif %}
+      </ul>
+    </nav>
+    <div class="rail-pied">
+      <div class="moi">
+        <span class="avatar" aria-hidden="true">{{ user.initiales }}</span>
+        <div>
+          <div class="moi-nom">{{ user }}</div>
+          <div class="moi-role">{% if user.is_superuser and user.role != 'patron' %}Administrateur{% else %}{{ user.get_role_display }}{% endif %}</div>
+        </div>
+      </div>
+      {% if user.is_staff %}<a class="rail-lien" href="{% url 'admin:index' %}">{% icone 'reglages' %}Comptes et réglages</a>{% endif %}
+      <form method="post" action="{% url 'deconnexion' %}">{% csrf_token %}<button class="rail-lien" type="submit">{% icone 'sortie' %}Se déconnecter</button></form>
+    </div>
+  </aside>
+
+  <div class="principal">
+    <header class="barre">
+      <button class="bouton bouton-discret bouton-icone bouton-menu" type="button" aria-controls="rail" aria-expanded="false">{% icone 'menu' %}<span class="sr">Ouvrir le menu</span></button>
+      <form class="recherche" action="{% url 'recherche' %}" method="get" role="search">
+        <label for="recherche-globale" class="sr">Rechercher une plaque, un client ou un ordre de réparation</label>
+        {% icone 'recherche' %}
+        <input id="recherche-globale" name="q" type="search" placeholder="Plaque, client ou n° d'OR" value="{% if section == 'recherche' %}{{ request.GET.q }}{% endif %}" autocomplete="off">
+      </form>
+      {% if user.gere_l_accueil %}
+      <a class="bouton bouton-principal" href="{% url 'reception' %}">{% icone 'plus' %}<span>Nouvelle réception</span></a>
+      {% endif %}
+    </header>
+
+    <main id="contenu" class="contenu">
+      {% if messages %}
+      <div class="messages">
+        {% for message in messages %}<p class="message message-{{ message.tags }}" role="status">{{ message }}</p>{% endfor %}
+      </div>
+      {% endif %}
+      {% block contenu %}{% endblock %}
+    </main>
+  </div>
+</div>
+{% else %}
+<main id="contenu">{% block contenu_public %}{% endblock %}</main>
+{% endif %}
+</body>
+</html>

@@ -1,0 +1,6 @@
+Django>=5.2,<6.0
+whitenoise>=6.7
+gunicorn>=23.0
+psycopg[binary]>=3.2   # PostgreSQL (DATABASE_URL ou DB_ENGINE=postgresql)
+vercel>=0.12           # stockage Vercel Blob, utilisé seulement si BLOB_READ_WRITE_TOKEN est défini
+# Facultatif : Pillow>=10.0 pour les photos générées par seed_demo

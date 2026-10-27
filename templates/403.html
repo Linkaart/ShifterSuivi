@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+{% block titre %}Accès réservé{% endblock %}
+{% block contenu %}
+<div class="panneau" style="max-width:560px"><div class="vide">
+  <h1 style="margin-bottom:10px">Accès réservé</h1>
+  <p>{{ exception|default:"Cette page est réservée à un autre rôle." }} Demandez au patron si vous en avez besoin.</p>
+  <a class="bouton" href="{% url 'tableau_de_bord' %}">Revenir au tableau de bord</a>
+</div></div>
+{% endblock %}
+{% block contenu_public %}<p style="padding:32px">Accès réservé. <a href="{% url 'connexion' %}">Se connecter</a></p>{% endblock %}

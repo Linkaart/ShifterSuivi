@@ -1,0 +1,39 @@
+{% extends "base.html" %}{% load garage_tags %}
+{% block titre %}Connexion{% endblock %}
+{% block contenu_public %}
+<div class="connexion">
+  <section class="connexion-visuel" aria-hidden="false">
+    <div class="marque">{% logo %}<span class="marque-nom">ShifterSuivi</span></div>
+    <div class="connexion-slogan">
+      <h1>Chaque voiture de l'atelier, de l'arrivée à la remise des clés.</h1>
+      <p>{{ garage.nom }}</p>
+    </div>
+    <svg class="grille-vitesses" viewBox="0 0 32 32" aria-hidden="true" focusable="false">
+      <g fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"><path d="M7 7v18M16 7v18M25 9v16M7 16h18"/></g>
+      <circle cx="25" cy="6.5" r="2.6" fill="none" stroke="currentColor" stroke-width="1.2"/>
+    </svg>
+  </section>
+  <section class="connexion-formulaire">
+    <form method="post" action="{% url 'connexion' %}">
+      {% csrf_token %}
+      <div>
+        <h2>Connexion</h2>
+        <p class="discret">Utilisez l'identifiant donné par le patron.</p>
+      </div>
+      {% if form.non_field_errors %}
+        <div class="erreurs-formulaire" role="alert">Identifiant ou mot de passe incorrect. Vérifiez les majuscules.</div>
+      {% endif %}
+      <div class="champ">
+        <label for="id_username">Identifiant</label>
+        <input type="text" name="username" id="id_username" autocomplete="username" autocapitalize="none" required autofocus value="{{ form.username.value|default:'' }}">
+      </div>
+      <div class="champ">
+        <label for="id_password">Mot de passe</label>
+        <input type="password" name="password" id="id_password" autocomplete="current-password" required>
+      </div>
+      <input type="hidden" name="next" value="{{ next }}">
+      <button class="bouton bouton-principal bouton-plein" type="submit">Se connecter</button>
+    </form>
+  </section>
+</div>
+{% endblock %}

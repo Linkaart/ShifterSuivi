@@ -1,0 +1,130 @@
+{% extends "base.html" %}{% load garage_tags %}
+{% block titre %}Nouvelle réception{% endblock %}
+{% block contenu %}
+<div class="entete">
+  <div class="entete-texte">
+    <h1>Nouvelle réception</h1>
+    <p>{% if etape == 'recherche' %}Commencez par la plaque : si la voiture est déjà venue, sa fiche se remplit toute seule.{% elif vehicule %}Notez l'état de la voiture et la demande du client, avec ses mots.{% else %}Première visite : recopiez la carte grise, puis notez l'entrée.{% endif %}</p>
+  </div>
+</div>
+
+{% if etape == 'recherche' %}
+<form method="get" class="recherche-plaque">
+  <div class="champ champ-plaque">
+    <label for="immat">Immatriculation</label>
+    <input id="immat" name="immat" value="{{ immat }}" placeholder="AB-123-CD" autocomplete="off" autocapitalize="characters" required autofocus>
+  </div>
+  <button class="bouton bouton-principal" type="submit">{% icone 'recherche' %}Rechercher</button>
+</form>
+{% if resultats %}
+<div class="resultats">
+  <p class="discret" style="margin:0">Véhicules qui correspondent à « {{ immat }} » :</p>
+  {% for v in resultats %}
+  <a class="resultat" href="?vehicule={{ v.pk }}">{% plaque v.immatriculation %}<span class="cellule-double"><span>{{ v.designation }}</span><small>{{ v.client.nom_affiche }}</small></span></a>
+  {% endfor %}
+  <a class="resultat resultat-nouveau" href="?immat={{ immat|urlencode }}&amp;nouveau=1">{% icone 'plus' %}C'est un autre véhicule : le créer</a>
+</div>
+{% endif %}
+
+{% else %}
+<form method="post" enctype="multipart/form-data" class="formulaire" action="{% url 'reception' %}{% if immat and not vehicule %}?immat={{ immat|urlencode }}&amp;nouveau=1{% endif %}">
+  {% csrf_token %}
+  {% if form_ordre.non_field_errors %}<div class="erreurs-formulaire">{{ form_ordre.non_field_errors|join:" " }}</div>{% endif %}
+
+  {% if vehicule %}
+  <input type="hidden" name="vehicule_id" value="{{ vehicule.pk }}">
+  <section class="groupe" aria-label="Véhicule">
+    <div class="vehicule-choisi">
+      {% plaque vehicule.immatriculation "grande" %}
+      <div class="details">
+        <strong>{{ vehicule.designation }}{% if vehicule.annee %}, {{ vehicule.annee }}{% endif %}</strong>
+        <small>{{ vehicule.client.nom_affiche }}, {{ vehicule.client.telephone }}</small>
+        <small>Dernier kilométrage connu : {{ vehicule.kilometrage|km }}</small>
+      </div>
+      <a class="bouton bouton-discret" href="{% url 'reception' %}">Changer de véhicule</a>
+    </div>
+    {% if deja_a_l_atelier %}
+    <p class="erreurs-formulaire" style="margin:14px 0 0">Ce véhicule est déjà à l'atelier : <a href="{{ deja_a_l_atelier.get_absolute_url }}">{{ deja_a_l_atelier.numero }}, {{ deja_a_l_atelier.get_statut_display|lower }}</a>.</p>
+    {% endif %}
+  </section>
+  {% else %}
+  <fieldset class="groupe">
+    <legend>Véhicule</legend>
+    <p class="groupe-intro">Les codes entre parenthèses sont les rubriques de la carte grise.</p>
+    <div class="grille">
+      {% include "garage/_champ.html" with champ=form_vehicule.immatriculation classe="col-4 champ-plaque" %}
+      {% include "garage/_champ.html" with champ=form_vehicule.marque classe="col-4" %}
+      {% include "garage/_champ.html" with champ=form_vehicule.modele classe="col-4" %}
+      {% include "garage/_champ.html" with champ=form_vehicule.version classe="col-6" %}
+      {% include "garage/_champ.html" with champ=form_vehicule.energie classe="col-3" %}
+      {% include "garage/_champ.html" with champ=form_vehicule.boite classe="col-3" %}
+      {% include "garage/_champ.html" with champ=form_vehicule.date_mise_circulation classe="col-4" %}
+      {% include "garage/_champ.html" with champ=form_vehicule.vin classe="col-5" %}
+      {% include "garage/_champ.html" with champ=form_vehicule.couleur classe="col-3" %}
+      {% include "garage/_champ.html" with champ=form_vehicule.date_dernier_ct classe="col-4" %}
+    </div>
+  </fieldset>
+
+  <fieldset class="groupe">
+    <legend>Client</legend>
+    <div class="choix bascule-client" role="radiogroup" aria-label="Client">
+      <label><input type="radio" name="client_choix" value="nouveau"{% if client_choix != 'existant' %} checked{% endif %}>Nouveau client</label>
+      <label><input type="radio" name="client_choix" value="existant"{% if client_choix == 'existant' %} checked{% endif %}>Client déjà connu</label>
+    </div>
+    <div data-bloc-client="existant"{% if client_choix != 'existant' %} hidden{% endif %}>
+      <div class="grille">{% include "garage/_champ.html" with champ=form_choix.client classe="col-6" %}</div>
+    </div>
+    <div data-bloc-client="nouveau"{% if client_choix == 'existant' %} hidden{% endif %}>
+      <div class="grille">
+        {% include "garage/_champ.html" with champ=form_client.type_client classe="col-12" %}
+        {% include "garage/_champ.html" with champ=form_client.nom classe="col-4" %}
+        {% include "garage/_champ.html" with champ=form_client.prenom classe="col-4" %}
+        {% include "garage/_champ.html" with champ=form_client.telephone classe="col-4" %}
+        {% include "garage/_champ.html" with champ=form_client.raison_sociale classe="col-6" %}
+        {% include "garage/_champ.html" with champ=form_client.siret classe="col-6" %}
+        {% include "garage/_champ.html" with champ=form_client.adresse classe="col-6" %}
+        {% include "garage/_champ.html" with champ=form_client.code_postal classe="col-2" %}
+        {% include "garage/_champ.html" with champ=form_client.ville classe="col-4" %}
+        {% include "garage/_champ.html" with champ=form_client.email classe="col-6" %}
+        {% include "garage/_champ.html" with champ=form_client.contact_prefere classe="col-6" %}
+        {% include "garage/_champ.html" with champ=form_client.accord_rappels classe="col-12" %}
+      </div>
+    </div>
+  </fieldset>
+  {% endif %}
+
+  <fieldset class="groupe">
+    <legend>Entrée à l'atelier</legend>
+    <p class="groupe-intro">Ce qui est noté ici protège le garage en cas de contestation.</p>
+    <div class="grille">
+      {% include "garage/_champ.html" with champ=form_ordre.km_entree classe="col-4" %}
+      {% include "garage/_champ.html" with champ=form_ordre.niveau_carburant classe="col-8" %}
+      {% include "garage/_champ.html" with champ=form_ordre.demande_client classe="col-6" %}
+      {% include "garage/_champ.html" with champ=form_ordre.etat_entree classe="col-6" %}
+      {% include "garage/_champ.html" with champ=form_ordre.photos classe="col-12" %}
+      {% include "garage/_champ.html" with champ=form_ordre.cles_accessoires classe="col-6" %}
+      {% include "garage/_champ.html" with champ=form_ordre.objets_laisses classe="col-6" %}
+      {% include "garage/_champ.html" with champ=form_ordre.emplacement classe="col-4" %}
+      {% include "garage/_champ.html" with champ=form_ordre.fin_prevue_le classe="col-4" %}
+      {% include "garage/_champ.html" with champ=form_ordre.urgence classe="col-4" %}
+    </div>
+  </fieldset>
+
+  <fieldset class="groupe">
+    <legend>Travaux et accord</legend>
+    <div class="grille">
+      {% include "garage/_champ.html" with champ=form_ordre.mecanicien classe="col-6" %}
+      {% include "garage/_champ.html" with champ=form_ordre.travaux_prevus classe="col-12" %}
+      {% include "garage/_champ.html" with champ=form_ordre.accord_immediat classe="col-6" %}
+      <div class="col-6" data-moyen-accord>{% include "garage/_champ.html" with champ=form_ordre.accord_moyen %}</div>
+      {% include "garage/_champ.html" with champ=form_ordre.reemploi_propose classe="col-12" %}
+    </div>
+  </fieldset>
+
+  <div class="pied-formulaire">
+    <a class="bouton bouton-discret" href="{% url 'atelier' %}">Annuler</a>
+    <button class="bouton bouton-principal" type="submit"{% if deja_a_l_atelier %} disabled{% endif %}>Enregistrer la réception</button>
+  </div>
+</form>
+{% endif %}
+{% endblock %}

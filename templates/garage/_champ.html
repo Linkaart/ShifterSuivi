@@ -1,0 +1,23 @@
+{% load garage_tags %}{% with f=champ %}{% with type=f.field.widget.input_type %}
+<div class="champ{% if f.errors %} en-erreur{% endif %}{% if classe %} {{ classe }}{% endif %}">
+  {% if type == "checkbox" %}
+    <label class="case" for="{{ f.id_for_label }}">{{ f }}<span>{{ f.label }}</span></label>
+    {% if f.help_text %}<p class="case-aide">{{ f.help_text }}</p>{% endif %}
+  {% elif type == "radio" %}
+    <span class="champ-titre" id="{{ f.auto_id }}_titre">{{ f.label }}{% if f.field.required %}<span class="requis" aria-hidden="true">*</span>{% endif %}</span>
+    <div class="choix" role="radiogroup" aria-labelledby="{{ f.auto_id }}_titre">
+      {% for option in f %}<label for="{{ option.id_for_label }}">{{ option.tag }}{{ option.choice_label }}</label>{% endfor %}
+    </div>
+    {% if f.help_text %}<p class="aide">{{ f.help_text }}</p>{% endif %}
+  {% elif type == "file" %}
+    <span class="champ-titre">{{ f.label }}{% if f.field.required %}<span class="requis" aria-hidden="true">*</span>{% endif %}</span>
+    <div class="envoi">{{ f }}<label class="bouton bouton-petit" for="{{ f.id_for_label }}">{% icone 'photo' %}Choisir des fichiers</label><span class="fichiers-choisis" id="{{ f.auto_id }}_liste" aria-live="polite">Aucun fichier choisi</span></div>
+    {% if f.help_text %}<p class="aide">{{ f.help_text }}</p>{% endif %}
+  {% else %}
+    <label for="{{ f.id_for_label }}">{{ f.label }}{% if f.field.required %}<span class="requis" aria-hidden="true">*</span>{% endif %}</label>
+    {{ f }}
+    {% if f.help_text %}<p class="aide">{{ f.help_text }}</p>{% endif %}
+  {% endif %}
+  {% for erreur in f.errors %}<p class="erreurs">{{ erreur }}</p>{% endfor %}
+</div>
+{% endwith %}{% endwith %}
